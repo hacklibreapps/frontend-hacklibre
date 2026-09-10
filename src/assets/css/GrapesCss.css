@@ -1,0 +1,76 @@
+.gjs-one-bg {
+  background-color: #f8fafc !important; /* gris muy claro */
+}
+
+/* Fondo del panel superior y lateral */
+.gjs-two-bg {
+  background-color: #e0f2fe !important; /* azul muy claro */
+}
+
+/* Color principal de iconos y botones */
+.gjs-one-color,
+.gjs-two-color {
+  color: #313638 !important; /* Cian-700 */
+}
+
+/* Color cuando un botón está activo */
+.gjs-pn-btn.gjs-pn-active,
+.gjs-pn-btn.gjs-pn-active:hover {
+  background-color: #f8fafc !important; /* Cian-200 */
+  color: #118132 !important; /* Cian-800 */
+}
+
+/* Color del borde de los paneles */
+.gjs-three-bg {
+  background-color: #ffffff !important;
+  border-color: #94a3b8 !important; /* gris-400 */
+}
+
+/* Fondo del área de trabajo (canvas) */
+.gjs-cv-canvas {
+  background-color: #f1f5f9 !important; /* gris claro */
+}
+
+/* Texto de tooltips, paneles y etiquetas */
+.gjs-four-color {
+  color: #0f172a !important; /* Charcoal */
+}
+
+/* Categorías del Block Manager */
+.gjs-block-category {
+  background-color: #e0f2fe !important;
+  color: #0f172a !important;
+  font-weight: 600;
+}
+
+/* Iconos dentro de botones */
+.gjs-pn-btn i {
+  color: #0891b2 !important;
+}
+
+/* Botones en hover */
+.gjs-pn-btn:hover {
+  background-color: #e0f2fe !important;
+  color: #0c4a6e !important;
+}
+
+/* Fondo del panel derecho (propiedades) */
+.gjs-sm-sector,
+.gjs-traits-label,
+.gjs-clm-label {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* Bordes y encabezados del panel derecho */
+.gjs-sm-header,
+.gjs-traits-label {
+  background-color: #e0f2fe !important;
+  font-weight: 500;
+  color: #0c4a6e !important;
+}
+
+/* Íconos del panel de dispositivos */
+.gjs-pn-panel.devices-c {
+  background-color: #f1f5f9 !important;
+}

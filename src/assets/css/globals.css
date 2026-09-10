@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import '@ofsajd/react-perfect-scrollbar/dist/css/styles.css';
+@import 'grapesjs/dist/css/grapes.min.css';
+
+.tox-editor-container .tox-promotion {
+  display: none;
+}
+
+/* ==== GrapesJS layout fix for Next.js ==== */
+/* .grapesjs-editor {
+  position: relative;
+}
+
+.gjs-one-bg {
+  background-color: #f8f9fa !important;
+}
+
+.gjs-block {
+  font-family: system-ui, sans-serif;
+} */
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(-10deg);
+  }
+
+  50% {
+    transform: rotate(10deg);
+  }
+
+  75% {
+    transform: rotate(-10deg);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+
+.ps__thumb-y {
+  background-color: #3b82f6 !important; /* Azul Tailwind por ejemplo */
+  width: 8px !important;
+  border-radius: 4px !important;
+}
