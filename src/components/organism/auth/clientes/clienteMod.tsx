@@ -308,6 +308,8 @@ const ClientesMod: React.FC<UUIDInterface> = ({ uuid }) => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitLoaded(true)
+    setSubmitLoaded(false)
   }
 
   useEffect(() => {
@@ -555,7 +557,7 @@ const ClientesMod: React.FC<UUIDInterface> = ({ uuid }) => {
                   </TableColBody>
 
                   <TableColBody className='px-4 py-2 text-center'>
-                     <Input
+                    <Input
                       data={{
                         placeHolder: 'Status ',
                         checked: currentContact.status,
