@@ -75,16 +75,6 @@ const FacturaManagement: React.FC = () => {
     if (data) setUsefullData(data.results || [])
   }, [data])
 
-  // const newData = (
-  //   <NewPath
-  //     tooltip='Nueva factura'
-  //     icon={<TbFileInvoice className='text-Cian8' />}
-  //     link={`${prefix}/facturas/nuevo/`}
-  //     className='text-Orangevivido'
-  //   />
-
-  // )
-
   const iconsGroup = (
     <div className='flex gap-2'>
       <NewPath

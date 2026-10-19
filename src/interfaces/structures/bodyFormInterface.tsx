@@ -99,9 +99,9 @@ export interface FacturaBodyInterface {
   igv: string // monto IGV
   igv_rate?: string // "0.18"
   importe_total: string
-  observation?: string
+  observations?: string
 
-  
+  client_name: string
   rel_clients: string // uuid cliente al terminar de cargar el xml se hace llamado a la base de datos con una funcion,puede ser con el RUC
   address_clients?: string
   status: boolean // si el backend lo permite

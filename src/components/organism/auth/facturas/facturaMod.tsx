@@ -31,132 +31,57 @@ import {
   IGV_RATE,
   ItemRow,
   uid,
-  parseNum,
   toISODate,
   isoToDMY,
-  moneySymbol,
-  COMPANIES
+  moneySymbol
 } from '@/modules/invoice/utils'
-import { BsFiletypeXml } from 'react-icons/bs'
+import { BsFiletypeXml, BsPaperclip, BsTrash, BsUpload } from 'react-icons/bs'
 import TextArea from '@/components/atom/structures/textArea'
 import { ModalSize } from '@/interfaces/querys/queryInterface'
 import { NewProductInQuotation } from '@/components/molecule/auth/quotations/ProductCreateModal'
 import { useImportInvoiceXML } from '@/components/molecule/invoices/hooks/useImportInvoiceXML'
 import { useInvoiceFormState } from '@/components/molecule/invoices/hooks/useInvoiceFormState'
 import { InvoiceItemsFromXML } from '@/components/molecule/invoices/items/invoiceItemsFromXML'
-import InvoiceItemsEditable from '@/components/molecule/invoices/items/invoiceItemsEditable'
+
 import { KeyValueInterface } from '@/interfaces/structures/keyValueInterface'
 import { useInvoiceCredito } from '@/components/molecule/invoices/hooks/useInvoiceCredito'
-// import { InvoiceCreditoUI } from '@/components/molecule/invoices/credito/invoiceCreditoUI'
 import { ParsedInvoiceXML } from '@/components/molecule/invoices/xml/types'
 import { AxiosError } from 'axios'
 import { getCookie } from '@/services/cookies/cookies'
+import { ItemInvoicesMod } from '@/components/molecule/invoices/ItemInvoicesMod'
+import { Hr } from '@/utils/hr'
+import { Cuota, CuotasTable } from '@/components/molecule/invoices/cuotas_table'
 
-// HELPERS Y FUNCIONES AUXILIARES
-
-type CompanyHeader = {
-  legalName: string
-  commercialName: string
-  address: string
-  city: string
-  ruc: string
-}
-type EnterpriseLike = {
-  id?: string
-  name?: string
-  nombreComercial?: string
-  razonSocial?: string
-  legalName?: string
-  direccion?: string
-  address?: string
-  ciudad?: string
-  city?: string
-  ruc?: string
-}
-type InvoiceItemLike = {
-  quantity?: number
-  cantidad?: number
-  unit?: string
-  unidad?: string
-  code?: string
-  codigo?: string
-  description?: string
-  descripcion?: string
-  unit_price?: number
-  precio_unitario?: number
-}
-type InvoiceRetrieveLike = {
-  empresa?: string
-  enterprise?: string
-  invoice_number?: string
-  invoice_file?: string
-  invoice_type?: string
-  emission_date?: string
-  due_date?: string
-  observation?: string
-  money?: 'PEN' | 'USD' | string
-  tipo_cambio_dolar?: string | number
-  rel_clients?: string
-  cliente?: { name?: string; ruc?: string; address?: string }
-  senores?: string
-  ruc?: string
-  direccion?: string
-  items?: InvoiceItemLike[]
-  detalle?: InvoiceItemLike[]
-}
-
-type Cuota = {
-  nro: number
-  fechaVencimiento: string
-  monto: number
-}
-
-type Money = 'PEN' | 'USD'
-
-type Props = {
-  cuotas: Cuota[]
-  money: Money
-  locked: boolean
-  onChangeFecha?: (nro: number, fecha: string) => void
-}
-
-const slug = (s?: string) =>
-  (s ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, ' ')
-
-function enterpriseToHeader(e?: EnterpriseLike): CompanyHeader {
-  if (!e)
-    return { legalName: '', commercialName: '', address: '', city: '', ruc: '' }
-
-  const nameGuess = slug(
-    e.nombreComercial || e.name || e.razonSocial || e.legalName
-  )
-  if (nameGuess.includes('hacklibre')) return { ...COMPANIES.HACKLIBRE }
-  if (nameGuess.includes('caparazon') || nameGuess.includes('caparazón'))
-    return { ...COMPANIES.CAPARAZON }
-
-  return {
-    legalName: e.razonSocial || e.legalName || e.name || '',
-    commercialName: e.nombreComercial || e.name || '',
-    address: e.direccion || e.address || '',
-    city: e.ciudad || e.city || '',
-    ruc: e.ruc || ''
-  }
-}
+//
 
 const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
-  const { token, enterprise, enterprises, ready } = useAuth()
+  const {
+    token,
+    enterprise,
+    ready,
+    detractionPercent,
+    detractionAccount,
+    enterpriseName,
+    comercialName,
+    ruc,
+    address,
+    departamento,
+    provincia,
+    distrito
+  } = useAuth()
 
+  // usestates
+  const [initialValues, setInitialValues] = useState<boolean>(false)
+  const [places, setPlaces] = useState<string[]>([])
   const [submitLoaded, setSubmitLoaded] = useState(false)
-  const [, setEmissionDate] = useState<string>('')
   const [money, setMoney] = useState<'PEN' | 'USD'>('PEN')
   const [tipocambio, setTipoCambio] = useState<TipoCambioDiaInterface | null>(
     null
   )
+  const [listDetractionPercent, setListDetractionPercent] = useState<
+    KeyValueInterface[]
+  >([])
+
   const [currentInvoiceType, setCurrentInvoiceType] = useState<string>('')
   const [itemsFromXML, setItemsFromXML] = useState(false)
   const [openNewProduct, setOpenNewProduct] = useState<ModalSize | null>(null)
@@ -178,75 +103,64 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
   const [montoDetraccion, setMontoDetraccion] = useState<number>(0)
   const [cuentaBN, setCuentaBN] = useState('')
 
-  // ************ Busqueda por RUC ****************
   const [loadingCliente, setLoadingCliente] = useState(false)
   const [lastRucSearched, setLastRucSearched] = useState<string>('')
 
-  //************************************************ */
-  const isManual = !isXMLImport && !lockedFromXML
+  // const isManual = !isXMLImport && !lockedFromXML
 
   const [unidadMedidaList, setUnidadMedidaList] = useState<KeyValueInterface[]>(
     []
   )
   const [moneyList, setMoneyList] = useState<KeyValueInterface[]>([])
 
-  // const [resetTipoDePago, setResetTipoDePago] = useState(false)
-
   const [dataEditFormaPago, setDataEditFormaPago] =
     useState<KeyValueInterface>()
 
   const [dataEditMoneda, setDataEditMoneda] = useState<KeyValueInterface>()
+
+  //
+
   const [resetMoneda, setResetMoneda] = useState<boolean>(false)
-
   const [resetFormaPago, setResetFormaPago] = useState<boolean>(false)
+  const [resetLeyendasDetraccion, setResetLeyendasDetraccion] =
+    useState<boolean>(false)
+  const [resetBienServicio, setResetBienServicio] = useState<boolean>(false)
+  const [resetMedioPagoDetraccion, setResetMedioPagoDetraccion] =
+    useState<boolean>(false)
+  const [resetPorcentajeDetraccion, setResetPorcentajeDetraccion] =
+    useState<boolean>(false)
 
-  const handlerRestartResetMoneda = () => {
-    if (resetMoneda) setResetMoneda(false)
-  }
-
-  const handlerRestartResetFormaPago = () => {
-    if (resetFormaPago) setResetFormaPago(false)
-  }
+  const [lateInvoice, setLateInvoice] = useState<boolean>(false)
 
   const [creditoFromXML, setCreditoFromXML] = useState<
     ParsedInvoiceXML['credito'] | null
   >(null)
 
-  // DETRACCIÓN - LEYENDA
-  // opciones (luego vendrán del backend)
   const [leyendasDetraccion, setLeyendasDetraccion] = useState<
     KeyValueInterface[]
   >([])
 
-  // valor para edición / XML import
   const [dataEditLeyendaDetraccion, setDataEditLeyendaDetraccion] =
     useState<KeyValueInterface>()
 
-  // reset del select
-  const [resetLeyendasDetraccion, setResetLeyendasDetraccion] =
-    useState<boolean>(false)
-
-  const handlerRestartResetLeyendasDetraccion = () => {
-    if (resetLeyendasDetraccion) setResetLeyendasDetraccion(false)
-  }
-
-  // DETRACCIÓN - BIEN / SERVICIO
   const [bienesServiciosSPOT, setBienesServiciosSPOT] = useState<
     KeyValueInterface[]
   >([])
   const [dataEditBienServicio, setDataEditBienServicio] =
     useState<KeyValueInterface>()
 
-  // DETRACCIÓN - MEDIO DE PAGO
   const [mediosPagoDetraccion, setMediosPagoDetraccion] = useState<
     KeyValueInterface[]
   >([])
   const [dataEditMedioPagoDetraccion, setDataEditMedioPagoDetraccion] =
     useState<KeyValueInterface>()
 
+  const [dataPorcentajeDetraccion, setDataPorcentajeDetraccion] =
+    useState<KeyValueInterface>()
+
   const [items, setItems] = useState<ItemRow[]>([
     {
-      id: uid(),
+      id: 'initial-invoice-item',
       quantity: 1,
       unit: 'UNIDAD',
       code: '',
@@ -255,25 +169,16 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
     }
   ])
 
-  const [company, setCompany] = useState<CompanyHeader>({
-    legalName: '',
-    commercialName: '',
-    address: '',
-    city: '',
-    ruc: ''
-  })
+  const [documentos, setDocumentos] = useState<File[]>([])
 
-  const updateCuotaFecha = (nro: number, fecha: string) => {
-    setCuotas((prev) =>
-      prev.map((c) => (c.nro === nro ? { ...c, fechaVencimiento: fecha } : c))
-    )
-  }
+  // refs
 
   const invoiceNumberRef = useRef<HTMLInputElement>(null)
   const invoiceFileRef = useRef<HTMLInputElement>(null)
   const invoiceTypeRef = useRef<HTMLInputElement>(null)
 
   const emissionDateRef = useRef<HTMLInputElement>(null)
+  const checkboxRef = useRef<HTMLInputElement>(null)
   const dueDateRef = useRef<HTMLInputElement>(null)
 
   const opGravadaRef = useRef<HTMLInputElement>(null)
@@ -292,9 +197,7 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
   const direccionClienteRef = useRef<HTMLInputElement>(null)
   const direccionReceptorRef = useRef<HTMLInputElement>(null)
   const tipoDePagoRef = useRef<HTMLInputElement>(null)
-  // const nroDeCuotasRef = useRef<HTMLInputElement>(null)
 
-  // ===== REFS para Información de la Detracción =====
   const leyendaDetraccionRef = useRef<HTMLInputElement>(null)
   const bienServicioRef = useRef<HTMLInputElement>(null)
   const medioPagoDetraccionRef = useRef<HTMLInputElement>(null)
@@ -302,63 +205,146 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
   const porcentajeDetraccionRef = useRef<HTMLInputElement>(null)
   const montoDetraccionRef = useRef<HTMLInputElement>(null)
 
-  const CuotasTable: React.FC<Props> = ({
-    cuotas,
-    money,
-    locked,
-    onChangeFecha
-  }) => (
-    <div className='mt-4'>
-      <table className='w-full text-xs border border-slate-300'>
-        <thead className='bg-slate-200'>
-          <tr>
-            <th className='border px-2 py-1'>N° Cuota</th>
-            <th className='border px-2 py-1'>Fec. Venc.</th>
-            <th className='border px-2 py-1 text-right'>Monto</th>
-          </tr>
-        </thead>
-        <tbody>
-          {cuotas.map((c) => (
-            <tr key={c.nro}>
-              <td className='border px-2 py-1 text-center'>{c.nro}</td>
-              <td className='border px-2 py-1'>
-                {locked ? (
-                  c.fechaVencimiento
-                ) : (
-                  <input
-                    type='date'
-                    value={c.fechaVencimiento}
-                    onChange={(e) => onChangeFecha?.(c.nro, e.target.value)}
-                    className='w-full border rounded px-1 h-8'
-                  />
-                )}
-              </td>
-              <td className='border px-2 py-1 text-right'>
-                {moneySymbol(money)} {c.monto.toFixed(2)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
+  // handlers reset
+
+  const handlerRestartResetMoneda = () => {
+    if (resetMoneda) setResetMoneda(false)
+  }
+  const handlerRestartResetFormaPago = () => {
+    if (resetFormaPago) setResetFormaPago(false)
+  }
+  const handlerRestartResetLeyendasDetraccion = () => {
+    if (resetLeyendasDetraccion) {
+      setResetLeyendasDetraccion(false)
+    }
+  }
+  const handlerRestartResetBienServicio = () => {
+    if (resetBienServicio) {
+      setResetBienServicio(false)
+    }
+  }
+  const handlerRestartResetMedioPagoDetraccion = () => {
+    if (resetMedioPagoDetraccion) {
+      setResetMedioPagoDetraccion(false)
+    }
+  }
+  const handlerRestartResetPorcentajeDetraccion = () => {
+    if (resetPorcentajeDetraccion) {
+      setResetPorcentajeDetraccion(false)
+    }
+  }
+
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+  }
+
+  const today = new Date()
+
+  const twoDaysAgo = new Date()
+  twoDaysAgo.setDate(today.getDate() - 2)
+
+  const minDate = formatDate(twoDaysAgo)
+  const maxDate = formatDate(today)
+
+  const updateCuotaFecha = (nro: number, fecha: string) => {
+    setCuotas((prev) =>
+      prev.map((c) => (c.nro === nro ? { ...c, fechaVencimiento: fecha } : c))
+    )
+  }
+  useEffect(() => {
+    setPlaces(
+      [distrito, provincia, departamento].filter(
+        (place): place is string =>
+          typeof place === 'string' && place.length > 0
+      )
+    )
+  }, [distrito, provincia, departamento])
+
+  const handleDocumentsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
+
+    if (!files.length) return
+
+    setDocumentos((prev) => {
+      const nuevos = files.filter(
+        (file) =>
+          !prev.some(
+            (existing) =>
+              existing.name === file.name &&
+              existing.size === file.size &&
+              existing.lastModified === file.lastModified
+          )
+      )
+
+      return [...prev, ...nuevos]
+    })
+
+    e.target.value = ''
+  }
+
+  const deleteDocument = (index: number) => {
+    setDocumentos((prev) =>
+      prev.filter((_, currentIndex) => currentIndex !== index)
+    )
+  }
+
+  const formatFileSize = (size: number) => {
+    if (size < 1024) return `${size} B`
+
+    if (size < 1024 * 1024) {
+      return `${(size / 1024).toFixed(1)} KB`
+    }
+
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  useEffect(() => {
+    if (detractionAccount) {
+      setCuentaBN(detractionAccount)
+
+      if (nroCuentaBNRef.current) {
+        nroCuentaBNRef.current.value = detractionAccount
+      }
+    }
+
+    if (detractionPercent !== null && detractionPercent !== undefined) {
+      const porcentaje = Number(detractionPercent) || 0
+
+      setPorcentajeDetraccion(porcentaje)
+
+      if (porcentajeDetraccionRef.current) {
+        porcentajeDetraccionRef.current.value = String(porcentaje)
+      }
+    }
+  }, [detractionAccount, detractionPercent])
+
+  const toLocalISODate = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+
+    return `${year}-${month}-${day}`
+  }
 
   useEffect(() => {
     const now = new Date()
-    const d = String(now.getDate()).padStart(2, '0')
-    const m = String(now.getMonth() + 1).padStart(2, '0')
-    const y = now.getFullYear()
-    setEmissionDate(`${d}/${m}/${y}`)
-    if (emissionDateRef.current) emissionDateRef.current.value = toISODate(now)
-    if (dueDateRef.current) dueDateRef.current.value = toISODate(now)
-  }, [])
 
-  useEffect(() => {
-    const list = Array.isArray(enterprises) ? enterprises : []
-    const selected = list.find((x) => x.uuid === enterprise)
-    const companyData = enterpriseToHeader(selected)
-    setCompany(companyData)
-  }, [enterprise, enterprises])
+    if (emissionDateRef.current) {
+      emissionDateRef.current.value = toLocalISODate(now)
+    }
+
+    // Fecha de vencimiento: mañana
+    const tomorrow = new Date(now)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    if (dueDateRef.current) {
+      dueDateRef.current.value = toLocalISODate(tomorrow)
+    }
+  }, [])
 
   useEffect(() => {
     const updateInvoiceType = () => {
@@ -382,11 +368,7 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
     IGV_RATE
   )
 
-  const {
-    credito: creditoCalculado,
-    // updateCuotaFecha,
-    setCredito
-  } = useInvoiceCredito({
+  const { credito: creditoCalculado, setCredito } = useInvoiceCredito({
     enabled: tipoDePago === 'CRED',
     total: calc.total,
     nroCuotas: nroDeCuotas
@@ -414,17 +396,30 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       if (!ready || !token || !enterprise) return
       try {
         const data = await getData(uuid, token)
-        const factura = data.props.factura as InvoiceRetrieveLike | null
+
         const tipocambioRes = data.props.tipocambio
-        if (factura) {
-          // Mapear si se necesita
+        const detractPercent = data.props.detractionPercent
+
+        if (
+          tipocambioRes &&
+          'status' in tipocambioRes &&
+          tipocambioRes.status === 200
+        ) {
+          setTipoCambio(tipocambioRes.data as TipoCambioDiaInterface)
         }
-        if (tipocambioRes) setTipoCambio(tipocambioRes)
+
+        if (
+          detractPercent &&
+          'status' in detractPercent &&
+          detractPercent.status === 200
+        ) {
+          setListDetractionPercent(detractPercent.data)
+        }
       } catch (error) {
         ToastNotification('danger', `Ha ocurrido un error - ${error}`)
       }
     }
-    if (uuid && token) fetchData()
+    if (token) fetchData()
   }, [uuid, token, enterprise, ready])
 
   useEffect(() => {
@@ -465,21 +460,55 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
   }, [token])
 
   useEffect(() => {
-    const loadCatalogosDetraccion = async () => {
-      try {
-        const res = await fetch('/api/catalogos/detraccion')
-        const data = await res.json()
+    const fetchLeyenda = async () => {
+      if (!token) return
 
-        setLeyendasDetraccion(data.leyendas)
-        setBienesServiciosSPOT(data.bienesServicios)
-        setMediosPagoDetraccion(data.mediosPago)
+      try {
+        const res = await ApiFecthAuth(
+          endPoints.mainData.detraction.leyend,
+          token
+        )
+        setLeyendasDetraccion(res?.data || [])
       } catch (error) {
-        console.error('Error cargando catálogos de detracción', error)
+        console.error('Error cargando tipo de operacion', error)
+        ToastNotification('danger', 'Error cargando tipo de operacion')
       }
     }
+    fetchLeyenda()
+  }, [token])
 
-    loadCatalogosDetraccion()
-  }, [])
+  useEffect(() => {
+    const fetchTipoBienServicio = async () => {
+      if (!token) return
+
+      try {
+        const res = await ApiFecthAuth(
+          endPoints.mainData.goodServiceType,
+          token
+        )
+        setBienesServiciosSPOT(res?.data || [])
+      } catch (error) {
+        console.error('Error cargando tipo de bien o servicio', error)
+        ToastNotification('danger', 'Error cargando tipo de bien o servicio')
+      }
+    }
+    fetchTipoBienServicio()
+  }, [token])
+
+  useEffect(() => {
+    const fetchMedioPago = async () => {
+      if (!token) return
+
+      try {
+        const res = await ApiFecthAuth(endPoints.mainData.paymentMethod, token)
+        setMediosPagoDetraccion(res?.data || [])
+      } catch (error) {
+        console.error('Error cargando medio de pago', error)
+        ToastNotification('danger', 'Error cargando medio de pago')
+      }
+    }
+    fetchMedioPago()
+  }, [token])
 
   useEffect(() => {
     const fetchTipoCambio = async () => {
@@ -538,15 +567,109 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
 
   // Recalcula el monto cada vez que cambie el total o el porcentaje
   useEffect(() => {
+    const aplicaDetraccion = calc.total >= 700
+
+    setHasDetraccion(aplicaDetraccion)
+
+    if (!aplicaDetraccion) {
+      setMontoDetraccion(0)
+      return
+    }
+
     const monto = Math.round(calc.total * (porcentajeDetraccion / 100))
+
     setMontoDetraccion(monto)
   }, [calc.total, porcentajeDetraccion])
+  useEffect(() => {
+    if (montoDetraccionRef.current) {
+      montoDetraccionRef.current.value = montoDetraccion.toFixed(2)
+    }
+  }, [montoDetraccion])
 
   useEffect(() => {
     if (tipocambio && tipoCambioDolarRef.current) {
       tipoCambioDolarRef.current.value = tipocambio.venta?.toString() ?? ''
     }
   }, [tipocambio])
+
+  useEffect(() => {
+    if (moneyList && moneyList.length > 0) {
+      if (moneyList && moneyList.length > 0) {
+        setDataEditMoneda(
+          moneyList.find((m) => m.attr === 'S/') ?? moneyList[0]
+        )
+      }
+    }
+  }, [moneyList])
+
+  useEffect(() => {
+    setDataEditFormaPago({ key: 'CONT', value: 'Al contado' })
+  }, [])
+
+  useEffect(() => {
+    if (leyendasDetraccion && leyendasDetraccion.length > 0) {
+      if (leyendasDetraccion && leyendasDetraccion.length > 0) {
+        setDataEditLeyendaDetraccion(
+          leyendasDetraccion.find((l) => l.key === 'ogc') ??
+            leyendasDetraccion[0]
+        )
+      }
+    }
+  }, [leyendasDetraccion])
+
+  // prueba de useeffect reinicio
+  // en opcion aca manejo del ref revisar como lo estamos armando
+  useEffect(() => {
+    if (initialValues) {
+      console.log('entro a initialvalues')
+
+      if (leyendasDetraccion && leyendasDetraccion.length > 0) {
+        if (leyendasDetraccion && leyendasDetraccion.length > 0) {
+          setDataEditLeyendaDetraccion(
+            leyendasDetraccion.find((l) => l.key === 'ogc') ??
+              leyendasDetraccion[0]
+          )
+        }
+      }
+      setInitialValues(false)
+    }
+  }, [initialValues, leyendasDetraccion])
+
+  useEffect(() => {
+    if (bienesServiciosSPOT && bienesServiciosSPOT.length > 0) {
+      if (bienesServiciosSPOT && bienesServiciosSPOT.length > 0) {
+        setDataEditBienServicio(
+          bienesServiciosSPOT.find((b) => b.key === '037') ??
+            bienesServiciosSPOT[0]
+        )
+      }
+    }
+  }, [bienesServiciosSPOT])
+
+  useEffect(() => {
+    if (mediosPagoDetraccion && mediosPagoDetraccion.length > 0) {
+      if (mediosPagoDetraccion && mediosPagoDetraccion.length > 0) {
+        setDataEditMedioPagoDetraccion(
+          mediosPagoDetraccion.find((m) => m.key === '001') ??
+            mediosPagoDetraccion[0]
+        )
+      }
+    }
+  }, [mediosPagoDetraccion])
+
+  useEffect(() => {
+    if (listDetractionPercent.length > 0) {
+      const selected =
+        listDetractionPercent.find(
+          (m) => Number(m.key) === Number(detractionPercent)
+        ) ?? listDetractionPercent[0]
+
+      setDataPorcentajeDetraccion(selected)
+      setPorcentajeDetraccion(Number(selected.key) || 0)
+    }
+  }, [detractionPercent, listDetractionPercent])
+
+  //
 
   // IMPORTACIÓN XML (HOOK)
   const { importXML, loading: loadingImportXML } = useImportInvoiceXML({
@@ -610,42 +733,94 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
     }
   })
 
+  const handlerIsLate = () => {
+    setLateInvoice(checkboxRef.current?.checked ?? false)
+  }
+
   // Crear función buscarClientePorRuc
   const buscarClientePorRuc = async (ruc: string) => {
     if (!token) return
     if (ruc.length !== 11) return
+
     if (ruc === lastRucSearched) return
 
     try {
       setLoadingCliente(true)
-      setLastRucSearched(ruc)
 
-      const response = await ApiFecthAuth(endPoints.clients.byRuc(ruc), token)
-
-      console.log('RESPONSE COMPLETA:', response)
-      console.log('DATA:', response?.data)
+      const response = await ApiFecthAuth(
+        `${endPoints.clients.byRuc(ruc)}&client_type=client`,
+        token
+      )
 
       const cliente = response?.data
 
-      if (cliente) {
-        if (senoresRef.current)
-          senoresRef.current.value = cliente.completeCompanyName ?? ''
+      if (!cliente?.uuid || !cliente?.ruc) {
+        if (senoresRef.current) {
+          senoresRef.current.value = ''
+        }
 
-        if (direccionClienteRef.current)
-          direccionClienteRef.current.value = cliente.address ?? ''
+        if (direccionClienteRef.current) {
+          direccionClienteRef.current.value = ''
+        }
 
-        if (relClientsRef.current)
-          relClientsRef.current.value = cliente.uuid ?? ''
+        if (relClientsRef.current) {
+          relClientsRef.current.value = ''
+        }
 
-        ToastNotification('success', 'Cliente encontrado.')
+        setLastRucSearched('')
+
+        ToastNotification(
+          'warning',
+          'Cliente no registrado. Puede ingresarlo manualmente.'
+        )
+
+        return
       }
+
+      /*
+       * Recién aquí sabemos que realmente existe.
+       */
+      if (senoresRef.current) {
+        senoresRef.current.value = cliente.completeCompanyName ?? ''
+      }
+
+      if (direccionClienteRef.current) {
+        direccionClienteRef.current.value = cliente.address ?? ''
+      }
+
+      if (relClientsRef.current) {
+        relClientsRef.current.value = cliente.uuid ?? ''
+      }
+
+      /*
+       * Solo una búsqueda exitosa se guarda.
+       */
+      setLastRucSearched(ruc)
+
+      ToastNotification('success', 'Cliente encontrado.')
     } catch (error: unknown) {
+      console.error('[CLIENTE] error:', error)
+
       const axiosError = error as AxiosError
 
-      if (axiosError.response?.status === 404) {
-        if (senoresRef.current) senoresRef.current.value = ''
-        if (direccionClienteRef.current) direccionClienteRef.current.value = ''
+      if (senoresRef.current) {
+        senoresRef.current.value = ''
+      }
 
+      if (direccionClienteRef.current) {
+        direccionClienteRef.current.value = ''
+      }
+
+      if (relClientsRef.current) {
+        relClientsRef.current.value = ''
+      }
+
+      /*
+       * También se libera en caso de error.
+       */
+      setLastRucSearched('')
+
+      if (axiosError.response?.status === 404) {
         ToastNotification(
           'warning',
           'Cliente no registrado. Puede ingresarlo manualmente.'
@@ -655,6 +830,32 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       }
     } finally {
       setLoadingCliente(false)
+    }
+  }
+
+  const handlerRucClienteChange = (val: string) => {
+    const clean = val.replace(/\D/g, '').slice(0, 11)
+
+    if (rucClienteRef.current) {
+      rucClienteRef.current.value = clean
+    }
+
+    if (clean.length === 11) {
+      buscarClientePorRuc(clean)
+    } else {
+      setLastRucSearched('')
+
+      if (senoresRef.current) {
+        senoresRef.current.value = ''
+      }
+
+      if (direccionClienteRef.current) {
+        direccionClienteRef.current.value = ''
+      }
+
+      if (relClientsRef.current) {
+        relClientsRef.current.value = ''
+      }
     }
   }
 
@@ -671,17 +872,6 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       inputMode: 'text',
       readOnly: lockedFromXML
     },
-    dueDate: {
-      name: 'due_date',
-      id: 'due_date',
-      showLabel: false,
-      label: 'Fecha de vencimiento',
-      ref: dueDateRef,
-      required: true,
-      type: 'date',
-      readOnly: lockedFromXML,
-      tiny: true
-    },
     emissionDate: {
       name: 'emission_date',
       id: 'emission_date',
@@ -693,15 +883,28 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       readOnly: lockedFromXML,
       tiny: true,
       defaultValue: toISODate(new Date()),
+      minDate: !lateInvoice ? minDate : undefined,
+      maxDate: !lateInvoice ? maxDate : undefined,
       onChange: (val: string) => {
         if (dueDateRef.current) dueDateRef.current.min = val
       }
+    },
+    lateInvoice: {
+      name: `lateInvoice`,
+      id: `lateInvoice`,
+      showLabel: true,
+      label: '¿Es una factura atrasada?',
+      required: true,
+      tiny: true,
+      type: 'checkbox',
+      ref: checkboxRef,
+      onChange: handlerIsLate
     },
     senores: {
       name: 'senores',
       id: 'senores',
       showLabel: false,
-      label: 'Señor(es)',
+      label: 'Cliente',
       ref: senoresRef,
       required: true,
       readOnly: lockedFromXML,
@@ -719,15 +922,7 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       tiny: true,
       placeHolder: '###########',
       inputMode: 'numeric',
-      onChange: (val: string) => {
-        const clean = val.replace(/\D/g, '') // solo números
-
-        if (rucClienteRef.current) rucClienteRef.current.value = clean
-
-        if (clean.length === 11) {
-          buscarClientePorRuc(clean)
-        }
-      }
+      onChange: handlerRucClienteChange
     },
     direccionCliente: {
       name: 'direccion_cliente',
@@ -735,27 +930,16 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       showLabel: false,
       label: 'Dirección del Cliente',
       ref: direccionClienteRef,
-      required: true,
+      required: false,
       readOnly: lockedFromXML,
       tiny: true,
       placeHolder: 'AV. / JR. / KM. ...'
     },
-    //AGREGAR NUEVO -- VERIFICAR SI VA O SE ELIMINA POR AHORA LO DEJAMOS(direccionReceptor)
-    // direccionReceptor: {
-    //   name: 'direccion_receptor',
-    //   id: 'direccion_receptor',
-    //   showLabel: false,
-    //   label: 'Dirección del Receptor de la factura',
-    //   ref: direccionReceptorRef,
-    //   required: true,
-    //   tiny: true,
-    //   placeHolder: 'AV. / JR. / KM. ...'
-    // },
     tipoCambioDolar: {
       name: 'tipo_cambio',
       id: 'tipo_cambio',
       showLabel: false,
-      label: 'Tipo de Cambio (PEN/USD)',
+      label: 'Tipo de Cambio',
       ref: tipoCambioDolarRef,
       value: tipocambio?.venta,
       required: true,
@@ -770,13 +954,11 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       ref: moneyRef,
       required: true,
       readOnly: lockedFromXML,
-      // disabled: loadingImportXML,  // revisar ???
       tiny: true,
       data: moneyList,
       editData: dataEditMoneda,
       resetSignal: resetMoneda,
       resetHandler: handlerRestartResetMoneda,
-      // value: moneyList,
       onChange: (key: string) => {
         setMoney(key as 'PEN' | 'USD')
       }
@@ -803,7 +985,6 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       showLabel: false,
       ref: tipoDePagoRef,
       readOnly: lockedFromXML,
-      // disabled: loadingImportXML, // revisar ???
       tiny: true,
       data: [
         { key: 'CONT', value: 'Al contado' },
@@ -819,38 +1000,12 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       }
     },
 
-    // nroDeCuotas: {
-    //   name: 'nro_de_cuotas',
-    //   id: 'nro_de_cuotas',
-    //   label: 'Número de Cuotas',
-    //   showLabel: false,
-    //   ref: nroDeCuotasRef,
-    //   required: true,
-    //   type: 'number',
-    //   min: 1,
-    //   value: nroDeCuotas,
-    //   hidden: tipoDePago !== 'CREDITO',
-    //   onChange: (key: string) => setNroDeCuotas(Number(key))
-    // },
-    // addCuotas: {
-    //   name: 'add_cuotas',
-    //   id: 'add_cuotas',
-    //   label: 'Agregar Cuotas',
-    //   showLabel: false,
-    //   type: 'button',
-    //   disabled: false,
-    //   loaded: false,
-    //   tiny: true,
-    //   // onClick: () => {},
-    //   buttonName: 'Agregar Cuotas'
-    // },
-
     // === DETRACCIÓN ===
     leyendaDetraccion: {
       name: 'leyenda_detraccion',
       id: 'leyenda_detraccion',
-      label: 'Leyenda',
-      showLabel: false,
+      label: 'Tipo de operación',
+      showLabel: true,
       ref: leyendaDetraccionRef,
       data: leyendasDetraccion,
       tiny: true,
@@ -859,39 +1014,57 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       editData: dataEditLeyendaDetraccion,
       resetSignal: resetLeyendasDetraccion,
       resetHandler: handlerRestartResetLeyendasDetraccion,
-      noDeleteOption: true
+      noDeleteOption: true,
+      onChange: (key: string) => {
+        setDataEditLeyendaDetraccion(
+          leyendasDetraccion.find((item) => item.key === key)
+        )
+      }
     },
     bienServicio: {
       name: 'bien_servicio',
       id: 'bien_servicio',
-      label: 'Bien o Servicio',
-      showLabel: false,
+      label: 'Bien o servicio sujeto a detracción*',
+      showLabel: true,
       ref: bienServicioRef,
       data: bienesServiciosSPOT,
       tiny: true,
       readOnly: lockedFromXML,
-      // disabled: loadingImportXML, // revisar ???
       editData: dataEditBienServicio,
-      noDeleteOption: true
+      resetSignal: resetBienServicio,
+      resetHandler: handlerRestartResetBienServicio,
+      noDeleteOption: true,
+      onChange: (key: string) => {
+        setDataEditBienServicio(
+          bienesServiciosSPOT.find((item) => item.key === key)
+        )
+      }
     },
     medioPagoDetraccion: {
       name: 'medio_pago_detraccion',
       id: 'medio_pago_detraccion',
       label: 'Medio de Pago',
-      showLabel: false,
+      showLabel: true,
       ref: medioPagoDetraccionRef,
       data: mediosPagoDetraccion,
       readOnly: lockedFromXML,
-      // disabled: loadingImportXML, // revisar ???
       tiny: true,
       editData: dataEditMedioPagoDetraccion,
-      noDeleteOption: true
+      resetSignal: resetMedioPagoDetraccion,
+      resetHandler: handlerRestartResetMedioPagoDetraccion,
+      noDeleteOption: true,
+      onChange: (key: string) => {
+        setDataEditMedioPagoDetraccion(
+          //mediosPagoDetraccion.find((item) => item.key === key)
+          mediosPagoDetraccion.find((item) => String(item.key) === String(key))
+        )
+      }
     },
     nroCuentaBN: {
       name: 'nro_cta_bn',
       id: 'nro_cta_bn',
       label: 'N° Cta. Banco Nación',
-      showLabel: false,
+      showLabel: true,
       readOnly: lockedFromXML,
       // disabled: loadingImportXML, // revisar ???
       tiny: true,
@@ -902,26 +1075,36 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
     porcentajeDetraccion: {
       name: 'porcentaje_detraccion',
       id: 'porcentaje_detraccion',
-      label: 'Porcentaje de detracción',
-      showLabel: false,
-      tiny: true,
+      label: '% de detracción',
+      showLabel: true,
       ref: porcentajeDetraccionRef,
+      data: listDetractionPercent,
+      tiny: true,
       readOnly: lockedFromXML,
-      // disabled: loadingImportXML, // revisar ???
-      type: 'number',
-      min: 0,
-      step: '0.01',
-      placeHolder: '12.00',
-      value: porcentajeDetraccion,
-      onChange: (val: string) => {
-        setPorcentajeDetraccion(parseFloat(val) || 0)
+      editData: dataPorcentajeDetraccion,
+      resetSignal: resetPorcentajeDetraccion,
+      resetHandler: handlerRestartResetPorcentajeDetraccion,
+      noDeleteOption: true,
+      //onChange: (key: string) => {
+      // setPorcentajeDetraccion(Number(key) || 0)
+      //}
+      onChange: (key: string) => {
+        const selected = listDetractionPercent.find(
+          (item) => String(item.key) === String(key)
+        )
+
+        console.log('KEY DETRACCION:', key)
+        console.log('SELECTED DETRACCION:', selected)
+
+        setDataPorcentajeDetraccion(selected)
+        setPorcentajeDetraccion(Number(key) || 0)
       }
     },
     montoDetraccion: {
       name: 'monto_detraccion',
       id: 'monto_detraccion',
       label: 'Monto de detracción',
-      showLabel: false,
+      showLabel: true,
       tiny: true,
       ref: montoDetraccionRef,
       type: 'number',
@@ -1001,14 +1184,6 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       { ref: invoiceNumberRef, message: 'Debe ingresar el número de factura' },
       { ref: senoresRef, message: 'Debe ingresar Señor(es)' },
       { ref: rucClienteRef, message: 'Debe ingresar el RUC del cliente' },
-      // {
-      //   ref: direccionClienteRef,
-      //   message: 'Debe ingresar la dirección del cliente'
-      // },
-      // {
-      //   ref: direccionReceptorRef,
-      //   message: 'Debe ingresar la dirección del Receptor'
-      // },
       {
         ref: tipoCambioDolarRef,
         message: 'Debe ingresar el tipo de cambio del día'
@@ -1016,6 +1191,7 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
     ]
 
     if (!CheckForm(fields)) return
+
     if (!token) {
       ToastNotification('danger', 'No hay sesión activa.')
       return
@@ -1024,33 +1200,39 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
     const resetFields = [
       {
         refs: [
+          checkboxRef,
           invoiceNumberRef,
+          emissionDateRef,
+          rucClienteRef,
+          senoresRef,
+          direccionClienteRef,
+          tipoCambioDolarRef,
+          observationRef,
+
           invoiceFileRef,
           invoiceTypeRef,
-          emissionDateRef,
+
           opGravadaRef,
           opInafectaRef,
           recargoConsumoRef,
           igvRef,
           importeTotalRef,
-          observationRef,
+
           moneyRef,
-          tipoCambioDolarRef,
           relClientsRef,
-          senoresRef,
-          rucClienteRef,
-          direccionClienteRef,
+
           direccionReceptorRef
         ],
-        // resetValues: Array(15).fill('')
         resetValues: []
       }
     ]
     const resetAllFields = ResetForm({ resetFields })
-    const handlerResetfield = async () => {
+
+    const handlerResetfield = () => {
       resetAllFields()
-      setResetFormaPago(true)
-      setResetMoneda(true)
+
+      setDocumentos([])
+
       setItems([
         {
           id: uid(),
@@ -1061,19 +1243,55 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
           unitPrice: 0
         }
       ])
+
       const now = new Date()
-      if (emissionDateRef.current)
+
+      if (emissionDateRef.current) {
         emissionDateRef.current.value = toISODate(now)
-      setEmissionDate(
-        `${String(now.getDate()).padStart(2, '0')}/${String(
-          now.getMonth() + 1
-        ).padStart(2, '0')}/${now.getFullYear()}`
-      )
+      } // esto hace que generer automaticamente el valor del input
+      setResetLeyendasDetraccion(true)
+      setMoney('PEN')
+      setTipoDePago('CONT')
+
+      setNroDeCuotas(1)
+      setFechaPrimeraCuota('')
+      setCuotas([])
+
+      setObservation('')
+
+      setHasDetraccion(false)
+      setDetraccionFromXML(false)
+
+      setIsXMLImport(false)
+      setLockedFromXML(false)
+      setItemsFromXML(false)
+      setCreditoFromXML(null)
+
+      setLateInvoice(false)
+
+      setPorcentajeDetraccion(Number(detractionPercent) || 0)
+      setMontoDetraccion(0)
+
+      setCuentaBN(detractionAccount ?? '')
+
+      setLastRucSearched('')
+
+      if (nroCuentaBNRef.current) {
+        nroCuentaBNRef.current.value = detractionAccount ?? ''
+      }
+
+      if (porcentajeDetraccionRef.current) {
+        porcentajeDetraccionRef.current.value = String(
+          Number(detractionPercent) || 0
+        )
+      }
+
+      // ==========================================
+      // VOLVER A EJECUTAR LOS useEffect DE DEFAULTS
+      // ==========================================
     }
     const [serie, correlativo] =
       invoiceNumberRef.current?.value.split('-') ?? []
-
-    console.log(creditoFinal)
 
     const body: FacturaBodyInterface & {
       items?: Array<{
@@ -1081,6 +1299,8 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
         quantity: number
         unit_price: number
       }>
+      documents?: File[]
+
       emission_date_display?: string
     } = {
       invoice_serial_nr: serie ?? '',
@@ -1088,16 +1308,15 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       emition_date: emissionDateRef.current?.value
         ? isoToDMY(emissionDateRef.current.value)
         : null,
+      client_name: senoresRef.current?.value ?? '',
       rel_clients: rucClienteRef.current?.value ?? '',
       address_clients: direccionClienteRef.current?.value ?? '',
-      // invoice_file: invoiceFileRef.current?.value ?? '',
       invoice_type: currentInvoiceType,
       payment_type: tipoDePago,
       has_delivery_address: false,
       money: money,
       exchange_rate: tipoCambioDolarRef.current?.value ?? String(tipocambio),
       cantidad_cuotas: nroDeCuotas,
-      // ACA ME QUEDE alem
       credito: tipoDePago === 'CRED' ? creditoFinal : null,
 
       op_gravada: String(calc.base),
@@ -1107,48 +1326,49 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       igv_rate: IGV_RATE.toFixed(2),
       importe_total: String(calc.total),
 
-      // === Información de la detracción ===
-      leyenda_detraccion: dataEditLeyendaDetraccion
-        ? String(dataEditLeyendaDetraccion.key)
-        : '',
+      leyenda_detraccion:
+        hasDetraccion && dataEditLeyendaDetraccion
+          ? String(dataEditLeyendaDetraccion.key)
+          : '',
 
-      bien_servicio: dataEditBienServicio
-        ? String(dataEditBienServicio.key)
-        : '',
+      bien_servicio:
+        hasDetraccion && dataEditBienServicio
+          ? String(dataEditBienServicio.key)
+          : '',
 
-      medio_pago_detraccion: dataEditMedioPagoDetraccion
-        ? String(dataEditMedioPagoDetraccion.key)
-        : '',
+      medio_pago_detraccion:
+        hasDetraccion && dataEditMedioPagoDetraccion
+          ? String(dataEditMedioPagoDetraccion.key)
+          : '',
 
-      nro_cta_bn: nroCuentaBNRef.current?.value ?? '',
-      porcentaje_detraccion: porcentajeDetraccionRef.current?.value ?? '0.00',
-      monto_detraccion: String(
-        Math.round(parseFloat(montoDetraccionRef.current?.value || '0'))
-      ),
+      nro_cta_bn: hasDetraccion ? (nroCuentaBNRef.current?.value ?? '') : '',
+
+      porcentaje_detraccion: hasDetraccion ? String(porcentajeDetraccion) : '0',
+
+      monto_detraccion: hasDetraccion ? String(montoDetraccion) : '0',
 
       total_neto_pagar: String(
-        calc.total -
-          Math.round(parseFloat(montoDetraccionRef.current?.value || '0'))
+        hasDetraccion ? calc.total - montoDetraccion : calc.total
       ),
 
       due_date: dueDateRef.current?.value
         ? isoToDMY(dueDateRef.current.value)
         : null,
 
-      observation: observationRef.current?.value ?? '',
-      // ser elejido desde el endpoint(tiene que ser el tipo de cambio de la factura inportada)
+      observations: observationRef.current?.value ?? '',
 
-      status: true, //se define en back
+      status: true,
 
       items: items.map((it) => ({
         description: it.description,
         quantity: it.quantity,
+        measurement_unit: it.unit,
         unit_price: it.unitPrice
-      }))
+      })),
 
-      //agregar campo de adjuntar archivo(se adjuntara la factura)
+      documents: documentos
     }
-    console.log(body)
+    console.log('body: ', body)
 
     const endPoint = uuid
       ? endPoints.invoices.patch(uuid)
@@ -1158,17 +1378,30 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
       setSubmitLoaded(true)
       if (uuid) {
         const response = await ApiPatchAuth(endPoint, token, body)
+
         ResponseFromEdited({ response, returnSuccess: `/facturas?t=s&m=edit` })
       } else {
-        const response = await ApiPostAuth(endPoint, token, body)
+        const response = await ApiPostAuth(
+          endPoint,
+          token,
+          {
+            ...body,
+            items: JSON.stringify(body.items),
+            credito: body.credito ? JSON.stringify(body.credito) : '',
+            documents: documentos
+          },
+          undefined,
+          'multipart/form-data'
+        )
+
         ResponseFromCreated({
           response,
           successMessage: 'Factura registrada SATISFACTORIAMENTE.',
           handlerResetfield
         })
+        setInitialValues(true)
       }
-    } catch (err) {
-      console.error('[FACTURA] submit error:', err)
+    } catch {
       ToastNotification('danger', 'No se pudo procesar la factura.')
     } finally {
       setSubmitLoaded(false)
@@ -1183,9 +1416,7 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
         <div className='w-full flex justify-start px-4'>
           <PageTitle
             description={
-              uuid
-                ? 'Editar factura electrónica'
-                : 'Registrar factura electrónica'
+              uuid ? 'Editar factura electrónica' : 'Nueva factura electrónica'
             }
           />
         </div>
@@ -1194,11 +1425,11 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
           <label
             htmlFor='xmlInput'
             className={`flex items-center gap-2 px-3 py-2 text-xs font-semibold border rounded-md cursor-pointer transition
-  ${
-    loadingImportXML
-      ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
-      : 'bg-cyan-50 text-cyan-700 border-cyan-300 hover:bg-cyan-100'
-  }`}
+            ${
+              loadingImportXML
+                ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+                : 'bg-cyan-50 text-cyan-700 border-cyan-300 hover:bg-cyan-100'
+            }`}
           >
             <BsFiletypeXml size={18} />
             {loadingImportXML ? 'Importando...' : 'Importar XML'}
@@ -1216,30 +1447,29 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
         </div>
       </div>
 
-      <GoBack enlace={`${prefix}/facturas/`} />
+      <GoBack enlace={`${prefix}/facturacion/`} />
 
       <PageContent className='w-full' styleInside={{ padding: '0px' }}>
         <Formulary onSubmit={onSubmit}>
-          {tipoDePago}
           <FormContainer>
             <FormContent className='w-full'>
               <div className='w-full overflow-hidden bg-white lg:rounded-lg lg:border lg:border-slate-400 max-w-none mx-0 px-4 sm:px-6 md:px-8 lg:px-10'>
                 {/* ==== ENCABEZADO DE LA FACTURA ==== */}
-
+                {lateInvoice ? 'true' : 'false'}
                 <div className='grid grid-cols-1 md:grid-cols-12 items-center rounded-t bg-white'>
                   {/* Bloque de empresa */}
                   <div className='col-span-12 md:col-span-8 p-4 text-center md:text-start flex flex-col justify-center'>
                     <div className='font-extrabold text-2xl sm:text-[1.6rem] uppercase leading-tight'>
-                      {company.legalName}
+                      {enterpriseName}
                     </div>
                     <div className='font-bold text-lg sm:text-xl leading-snug'>
-                      {company.commercialName}
+                      {comercialName}
                     </div>
                     <div className='text-sm sm:text-base mt-1 leading-snug'>
-                      {company.address}
+                      {address}
                     </div>
                     <div className='text-sm sm:text-base leading-snug'>
-                      {company.city}
+                      {places.join('-')}
                     </div>
                   </div>
 
@@ -1254,7 +1484,7 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
                         FACTURA ELECTRÓNICA
                       </div>
                       <div className='text-xs mt-1 leading-tight font-medium tracking-normal'>
-                        RUC: {company.ruc}
+                        RUC: {ruc}
                       </div>
                       <div className='mt-2 font-semibold text-xs tracking-wide'>
                         <Input data={formData.invoiceNumber} />
@@ -1264,42 +1494,29 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
                 </div>
 
                 {/* SEPARADOR */}
-                <div className='w-full h-1 bg-slate-300' />
+                <Hr />
 
                 {/* DATOS */}
                 <div className='p-6 space-y-2'>
-                  <div className='flex flex-col md:flex-row md:items-center md:gap-3 xl:gap-6'>
-                    <div className='w-full md:w-4/12 lg:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
-                      {formData.dueDate.label}
-                    </div>
-                    <div className='w-full md:w-8/12 lg:w-5/12 md:max-w-[280px]'>
-                      <Input data={formData.dueDate} />
+                  <div className='flex flex-col md:flex-row md:items-start'>
+                    <div className='w-full md:w-4/12 xl:w-2/12 h-10 flex items-center justify-start text-left whitespace-nowrap'>
+                      <Input data={formData.lateInvoice} />
                     </div>
                   </div>
-
                   <div className='flex flex-col md:flex-row md:items-center md:gap-3 xl:gap-6'>
-                    <div className='w-full md:w-4/12 lg:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
+                    <div className='w-full md:w-4/12 xl:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
                       {formData.emissionDate.label}
                     </div>
-                    <div className='w-full md:w-8/12 lg:w-5/12 md:max-w-[280px] flex items-center gap-2'>
+                    <div className='w-full md:w-8/12 xl:w-5/12 md:max-w-[280px] flex items-center gap-2'>
                       <Input data={formData.emissionDate} />
                     </div>
                   </div>
 
                   <div className='flex flex-col md:flex-row md:items-center md:gap-3 xl:gap-6'>
-                    <div className='w-full md:w-4/12 lg:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
-                      {formData.senores.label}
-                    </div>
-                    <div className='w-full md:w-8/12 lg:w-5/12 md:max-w-[400px]'>
-                      <Input data={formData.senores} />
-                    </div>
-                  </div>
-
-                  <div className='flex flex-col md:flex-row md:items-center md:gap-3 xl:gap-6'>
-                    <div className='w-full md:w-4/12 lg:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
+                    <div className='w-full md:w-4/12 xl:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
                       {formData.rucCliente.label}
                     </div>
-                    <div className='w-full md:w-8/12 lg:w-5/12 md:max-w-[260px]'>
+                    <div className='w-full md:w-8/12 xl:w-5/12 md:max-w-[260px]'>
                       <Input data={formData.rucCliente} />
 
                       {loadingCliente && (
@@ -1311,121 +1528,116 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
                   </div>
 
                   <div className='flex flex-col md:flex-row md:items-center md:gap-3 xl:gap-6'>
-                    <div className='w-full md:w-4/12 lg:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
+                    <div className='w-full md:w-4/12 xl:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
+                      {formData.senores.label}
+                    </div>
+                    <div className='w-full md:w-8/12 xl:w-5/12 md:max-w-[400px]'>
+                      <Input data={formData.senores} />
+                    </div>
+                  </div>
+
+                  <div className='flex flex-col md:flex-row md:items-center md:gap-3 xl:gap-6'>
+                    <div className='w-full md:w-4/12 xl:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
                       {formData.direccionCliente.label}
                     </div>
-                    <div className='w-full md:w-8/12 lg:w-5/12 md:max-w-[560px]'>
+                    <div className='w-full md:w-8/12 xl:w-5/12 md:max-w-[560px]'>
                       <Input data={formData.direccionCliente} />
                     </div>
                   </div>
-                  {/* <div className='flex flex-col md:flex-row md:items-center md:gap-3 xl:gap-6'>
-                    <div className='w-full md:w-4/12 lg:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
-                      {formData.direccionReceptor.label}
-                    </div>
-                    <div className='w-full md:w-8/12 lg:w-5/12 md:max-w-[560px]'>
-                      <Input data={formData.direccionReceptor} />
-                    </div>
-                  </div> */}
 
                   <div className='flex flex-col md:flex-row md:items-center md:gap-3 xl:gap-6'>
-                    <div className='w-full md:w-4/12 lg:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
+                    <div className='w-full md:w-4/12 xl:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
                       {formData.tipoCambioDolar.label}
                     </div>
-                    <div className='w-full md:w-8/12 lg:w-5/12 md:max-w-[200px]'>
+                    <div className='w-full md:w-8/12 xl:w-5/12 md:max-w-[200px]'>
                       <Input data={formData.tipoCambioDolar} />
                     </div>
                   </div>
 
                   <div className='flex flex-col md:flex-row md:items-center md:gap-3 xl:gap-6'>
-                    <div className='w-full md:w-4/12 lg:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
+                    <div className='w-full md:w-4/12 xl:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
                       {formData.money.label}
                     </div>
-                    <div className='w-full md:w-8/12 lg:w-5/12 md:max-w-[260px]'>
+                    <div className='w-full md:w-8/12 xl:w-5/12 md:max-w-[260px]'>
                       <Select data={formData.money} />
                     </div>
                   </div>
 
                   <div className='flex flex-col md:flex-row md:items-center md:gap-3 xl:gap-6'>
-                    <div className='w-full md:w-4/12 lg:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
+                    <div className='w-full md:w-4/12 xl:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
                       {formData.observation.label}
                     </div>
-                    <div className='w-full md:w-8/12 lg:w-5/12 md:max-w-[560px]'>
+                    <div className='w-full md:w-8/12 xl:w-5/12 md:max-w-[560px]'>
                       <TextArea data={formData.observation} />
                     </div>
                   </div>
 
                   <div className='flex flex-col md:flex-row md:items-center md:gap-3 xl:gap-6'>
-                    <div className='w-full md:w-4/12 lg:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
+                    <div className='w-full md:w-4/12 xl:w-3/12 h-10 flex items-center text-left whitespace-nowrap'>
                       {formData.tipoDePago.label}
                     </div>
-                    <div className='w-full md:w-8/12 lg:w-5/12 md:max-w-[560px]'>
+                    <div className='w-full md:w-8/12 xl:w-5/12 md:max-w-[560px]'>
                       <Select data={formData.tipoDePago} />
                     </div>
                   </div>
 
                   {/* BLOQUE CORRECTO (NO borrar) */}
                   {/* ====== SOLO FACTURA MANUAL ====== */}
-                  {tipoDePago === 'CRED' &&
-                    !isXMLImport &&
-                    !creditoFromXML && (
-                      <>
-                        <div className='mt-4 border border-slate-300 rounded-md p-4 bg-slate-50'>
-                          <h4 className='font-semibold text-sm mb-3'>
-                            Crédito / Cuotas
-                          </h4>
+                  {tipoDePago === 'CRED' && !isXMLImport && !creditoFromXML && (
+                    <>
+                      <div className='mt-4 border border-slate-300 rounded-md p-4 bg-slate-50'>
+                        <h4 className='font-semibold text-sm mb-3'>
+                          Crédito / Cuotas
+                        </h4>
 
-                          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                            <div>
-                              <label className='text-sm font-medium'>
-                                Cantidad de cuotas
-                              </label>
-                              <input
-                                type='number'
-                                min={1}
-                                value={nroDeCuotas}
-                                onChange={(e) =>
-                                  setNroDeCuotas(Number(e.target.value) || 1)
-                                }
-                                className='w-full border rounded px-2 h-9'
-                              />
-                            </div>
+                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                          <div>
+                            <label className='text-sm font-medium'>
+                              Cantidad de cuotas
+                            </label>
+                            <input
+                              type='number'
+                              min={1}
+                              value={nroDeCuotas}
+                              onChange={(e) =>
+                                setNroDeCuotas(Number(e.target.value) || 1)
+                              }
+                              className='w-full border rounded px-2 h-9'
+                            />
+                          </div>
 
-                            <div>
-                              <label className='text-sm font-medium'>
-                                Fecha de vencimiento (1ra cuota)
-                              </label>
-                              <input
-                                type='date'
-                                value={fechaPrimeraCuota}
-                                onChange={(e) =>
-                                  setFechaPrimeraCuota(e.target.value)
-                                }
-                                className='w-full border rounded px-2 h-9'
-                              />
-                            </div>
+                          <div>
+                            <label className='text-sm font-medium'>
+                              Fecha de vencimiento (1ra cuota)
+                            </label>
+                            <input
+                              type='date'
+                              value={fechaPrimeraCuota}
+                              onChange={(e) =>
+                                setFechaPrimeraCuota(e.target.value)
+                              }
+                              className='w-full border rounded px-2 h-9'
+                            />
                           </div>
                         </div>
+                      </div>
 
-                        {cuotas.length > 0 && (
-                          <CuotasTable
-                            cuotas={cuotas}
-                            money={money}
-                            locked={false}
-                            onChangeFecha={updateCuotaFecha}
-                          />
-                        )}
-                      </>
-                    )}
+                      {cuotas.length > 0 && (
+                        <CuotasTable
+                          cuotas={cuotas}
+                          money={money}
+                          locked={false}
+                          onChangeFecha={updateCuotaFecha}
+                        />
+                      )}
+                    </>
+                  )}
                 </div>
-                {/* BLOQUE CORRECTO FIN (NO borrar) */}
-
-                {/* SEPARADOR */}
-                <div className='w-full h-1 bg-slate-300' />
+                <Hr />
 
                 {/* =====================
                     ÍTEMS DE FACTURA
                 ===================== */}
-
                 {itemsFromXML ? (
                   <InvoiceItemsFromXML
                     items={items}
@@ -1433,207 +1645,48 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
                     onEnableEdit={() => setItemsFromXML(false)}
                   />
                 ) : (
-                  <InvoiceItemsEditable
-                    items={items}
-                    setItems={setItems}
-                    currency={money}
-                    unidadMedidaList={unidadMedidaList}
-                    locked={itemsFromXML}
-                  />
+                  <div className='mt-4 border border-slate-300 rounded-lg overflow-hidden'>
+                    <div className='flex justify-start items-center bg-cyan-900 text-white px-4 py-2'>
+                      <span className='font-semibold text-sm'>Productos</span>
+                    </div>
+                    {items.map((it, index) => (
+                      <ItemInvoicesMod
+                        key={it.id}
+                        item={it}
+                        index={index}
+                        setItems={setItems}
+                        unidadMedidaList={unidadMedidaList}
+                      />
+                    ))}
+
+                    {/* Botón estático al final */}
+                    <div className='flex justify-end my-4 mr-4'>
+                      <button
+                        type='button'
+                        onClick={() =>
+                          setItems((prev) => [
+                            ...prev,
+                            {
+                              id: uid(),
+                              quantity: 1,
+                              unit: 'UNIDAD',
+                              code: '',
+                              description: '',
+                              unitPrice: 0
+                            }
+                          ])
+                        }
+                        className='flex items-center gap-2 px-4 py-2 border border-emerald-500 text-emerald-600 rounded-md font-medium text-sm hover:bg-emerald-50 transition'
+                      >
+                        <RiAddLine size={18} />
+                        Agregar ítem
+                      </button>
+                    </div>
+                  </div>
                 )}
 
                 {/* TABLA ÍTEMS */}
-                {/* 📱 Vista móvil (tarjetas verticales con botón fijo al final) */}
-                <div className='block md:hidden space-y-4 relative'>
-                  {items.map((it, index) => (
-                    <div
-                      key={it.id}
-                      className='border border-slate-300 rounded-lg p-3 bg-white shadow-sm space-y-2'
-                    >
-                      <div className='flex justify-between items-center mb-1'>
-                        <h4 className='font-semibold text-slate-700'>
-                          Ítem {index + 1}
-                        </h4>
-                        <button
-                          type='button'
-                          onClick={() =>
-                            setItems((prev) =>
-                              prev.filter((r) => r.id !== it.id)
-                            )
-                          }
-                          className='h-6 w-6 flex items-center justify-center border border-rose-400 text-rose-600 rounded hover:bg-rose-50'
-                          title='Eliminar ítem'
-                        >
-                          ✕
-                        </button>
-                      </div>
-
-                      <div className='grid grid-cols-1 gap-2 text-sm'>
-                        <div>
-                          <label className='block text-slate-600 font-medium'>
-                            Cantidad
-                          </label>
-                          <input
-                            type='number'
-                            min={0}
-                            step='any'
-                            className='w-full border border-slate-300 rounded px-2 h-9 text-right'
-                            value={it.quantity}
-                            onFocus={(e) => {
-                              if (!e.target.dataset.cleared) {
-                                e.target.value = ''
-                                e.target.dataset.cleared = 'true'
-                              }
-                            }}
-                            onChange={(e) =>
-                              setItems((prev) =>
-                                prev.map((r) =>
-                                  r.id === it.id
-                                    ? {
-                                        ...r,
-                                        quantity: parseNum(e.target.value)
-                                      }
-                                    : r
-                                )
-                              )
-                            }
-                          />
-                        </div>
-
-                        <div>
-                          <label className='block text-slate-600 font-medium'>
-                            Unidad
-                          </label>
-                          <input
-                            className='w-full border border-slate-300 rounded px-2 h-9 text-center'
-                            value={it.unit}
-                            onFocus={(e) => {
-                              if (!e.target.dataset.cleared) {
-                                e.target.value = ''
-                                e.target.dataset.cleared = 'true'
-                              }
-                            }}
-                            onChange={(e) =>
-                              setItems((prev) =>
-                                prev.map((r) =>
-                                  r.id === it.id
-                                    ? { ...r, unit: e.target.value }
-                                    : r
-                                )
-                              )
-                            }
-                          />
-                        </div>
-
-                        <div>
-                          <label className='block text-slate-600 font-medium'>
-                            Código
-                          </label>
-                          <input
-                            className='w-full border border-slate-300 rounded px-2 h-9 text-center'
-                            value={it.code}
-                            onFocus={(e) => {
-                              if (!e.target.dataset.cleared) {
-                                e.target.value = ''
-                                e.target.dataset.cleared = 'true'
-                              }
-                            }}
-                            onChange={(e) =>
-                              setItems((prev) =>
-                                prev.map((r) =>
-                                  r.id === it.id
-                                    ? { ...r, code: e.target.value }
-                                    : r
-                                )
-                              )
-                            }
-                          />
-                        </div>
-
-                        <div>
-                          <label className='block text-slate-600 font-medium'>
-                            Descripción
-                          </label>
-                          <input
-                            className='w-full border border-slate-300 rounded px-2 h-9'
-                            value={it.description}
-                            placeholder='Detalle del servicio / producto'
-                            onFocus={(e) => {
-                              if (!e.target.dataset.cleared) {
-                                e.target.value = ''
-                                e.target.dataset.cleared = 'true'
-                              }
-                            }}
-                            onChange={(e) =>
-                              setItems((prev) =>
-                                prev.map((r) =>
-                                  r.id === it.id
-                                    ? { ...r, description: e.target.value }
-                                    : r
-                                )
-                              )
-                            }
-                          />
-                        </div>
-
-                        <div>
-                          <label className='block text-slate-600 font-medium'>
-                            Valor unitario
-                          </label>
-                          <input
-                            type='number'
-                            min={0}
-                            step='any'
-                            className='w-full border border-slate-300 rounded px-2 h-9 text-right'
-                            value={it.unitPrice}
-                            onFocus={(e) => {
-                              if (!e.target.dataset.cleared) {
-                                e.target.value = ''
-                                e.target.dataset.cleared = 'true'
-                              }
-                            }}
-                            onChange={(e) =>
-                              setItems((prev) =>
-                                prev.map((r) =>
-                                  r.id === it.id
-                                    ? {
-                                        ...r,
-                                        unitPrice: parseNum(e.target.value)
-                                      }
-                                    : r
-                                )
-                              )
-                            }
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Botón estático al final */}
-                  <div className='flex justify-end mt-4'>
-                    <button
-                      type='button'
-                      onClick={() =>
-                        setItems((prev) => [
-                          ...prev,
-                          {
-                            id: uid(),
-                            quantity: 1,
-                            unit: 'UNIDAD',
-                            code: '',
-                            description: '',
-                            unitPrice: 0
-                          }
-                        ])
-                      }
-                      className='flex items-center gap-2 px-4 py-2 border border-emerald-500 text-emerald-600 rounded-md font-medium text-sm hover:bg-emerald-50 transition'
-                    >
-                      <RiAddLine size={18} />
-                      Agregar ítem
-                    </button>
-                  </div>
-
+                <div className='block space-y-4 relative'>
                   <div className='mt-4 text-[13px] flex justify-start'>
                     Valor de Venta de Operaciones Gratuitas:
                     <span className='inline-flex items-center ml-2'>
@@ -1650,7 +1703,7 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
                 </div>
 
                 {/* SEPARADOR */}
-                <div className='w-full h-1 bg-slate-300 my-4' />
+                <Hr />
 
                 {/* === TOTALES + LETRAS + Operaciones Gratuitas === */}
                 <div className='p-4 border-t border-slate-300 bg-slate-50'>
@@ -1714,52 +1767,40 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
                 </div>
 
                 {/* ---------------------------------------------------------INICIO DE DESTRACCIONES---------------------------------------- */}
-                {isManual && (
-                  <div className='w-full border border-slate-400 text-xs bg-white rounded-md shadow-sm mt-4'>
-                    <div className='border-b border-slate-300 bg-slate-100 px-3 py-1 font-semibold'>
+                {(hasDetraccion || detraccionFromXML) && (
+                  <div className='w-full border border-slate-400 text-xs bg-white rounded-md  shadow-sm mt-4'>
+                    <div className='border-b border-slate-300 bg-slate-100 px-3 py-1 rounded-md font-semibold'>
                       Información de la Detracción
                     </div>
 
-                    <div className='px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2'>
-                      <div>
-                        <label className='font-medium'>Leyenda</label>
+                    <div className='px-4 py-3 flex flex-row justify-center items-center flex-wrap'>
+                      <div className='w-full md:w-6/12 xl:w-4/12 2xl:w-2/12 md:px-2'>
                         <Select data={formData.leyendaDetraccion} />
                       </div>
 
-                      <div>
-                        <label className='font-medium'>Bien o Servicio</label>
+                      <div className='w-full md:w-6/12 xl:w-4/12 2xl:w-2/12 md:px-2'>
                         <Select data={formData.bienServicio} />
                       </div>
 
-                      <div>
-                        <label className='font-medium'>Medio de Pago</label>
+                      <div className='w-full md:w-6/12 xl:w-4/12 2xl:w-2/12 md:px-2'>
                         <Select data={formData.medioPagoDetraccion} />
                       </div>
 
-                      <div>
-                        <label className='font-medium'>
-                          N° Cuenta Banco Nación
-                        </label>
+                      <div className='w-full md:w-6/12 xl:w-3/12 2xl:w-2/12 md:px-2'>
                         <Input data={formData.nroCuentaBN} />
                       </div>
 
-                      <div>
-                        <label className='font-medium'>
-                          Porcentaje de detracción
-                        </label>
-                        <Input data={formData.porcentajeDetraccion} />
+                      <div className='w-full md:w-6/12 xl:w-2/12 2xl:w-2/12 md:px-2'>
+                        <Select data={formData.porcentajeDetraccion} />
                       </div>
 
-                      <div>
-                        <label className='font-medium'>
-                          Monto detracción (S/.)
-                        </label>
+                      <div className='w-full md:w-6/12  2xl:w-2/12 xl:w-3/12 md:px-2'>
                         <Input data={formData.montoDetraccion} />
                       </div>
                     </div>
                   </div>
                 )}
-
+                {/*
                 {(hasDetraccion || detraccionFromXML) && (
                   <div className='w-full border border-slate-400 text-xs bg-white rounded-md shadow-sm mt-4'>
                     <div className='border-b border-slate-300 bg-slate-100 px-3 py-1 font-semibold'>
@@ -1798,7 +1839,7 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
                         <label className='font-medium'>
                           Porcentaje de detracción
                         </label>
-                        <Input data={formData.porcentajeDetraccion} />
+                        <Select data={formData.porcentajeDetraccion} />
                       </div>
 
                       <div>
@@ -1809,10 +1850,86 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
                       </div>
                     </div>
                   </div>
-                )}
+                )}*/}
 
                 {/* ---------------------------------------------------------FIN DE DESTRACCIONES---------------------------------------- */}
+                <div className='w-full border border-slate-300 rounded-lg overflow-hidden mt-4'>
+                  {/* HEADER */}
+                  <div className='flex justify-between items-center bg-cyan-900 text-white px-4 py-2'>
+                    <div className='flex items-center gap-2'>
+                      <BsPaperclip size={16} />
+                      <span className='font-semibold text-sm'>
+                        Documentos adjuntos
+                      </span>
+                    </div>
+                  </div>
 
+                  <div className='p-4 bg-white'>
+                    {/* BOTÓN ADJUNTAR */}
+                    <div className='flex justify-end mb-4'>
+                      <label
+                        htmlFor='invoiceDocuments'
+                        className='flex items-center gap-2 px-4 py-2 border border-emerald-500 text-emerald-600 rounded-md font-medium text-sm hover:bg-emerald-50 transition cursor-pointer'
+                      >
+                        <BsUpload size={16} />
+                        Adjuntar documento
+                      </label>
+
+                      <input
+                        id='invoiceDocuments'
+                        ref={invoiceFileRef}
+                        type='file'
+                        accept='.pdf,.png,.jpg,.jpeg'
+                        multiple
+                        className='hidden'
+                        onChange={handleDocumentsChange}
+                      />
+                    </div>
+
+                    {/* DOCUMENTOS SELECCIONADOS */}
+                    {documentos.length === 0 ? (
+                      <div className='text-sm text-slate-500 text-center py-4 border border-dashed border-slate-300 rounded-md'>
+                        No se han adjuntado documentos.
+                      </div>
+                    ) : (
+                      <div className='space-y-2'>
+                        {documentos.map((file, index) => (
+                          <div
+                            key={`${file.name}-${file.lastModified}-${index}`}
+                            className='flex justify-between items-center border border-slate-200 rounded-md px-3 py-2 bg-slate-50'
+                          >
+                            <div className='flex items-center gap-3 min-w-0'>
+                              <BsPaperclip className='text-slate-500 shrink-0' />
+
+                              <div className='min-w-0'>
+                                <div className='text-sm font-medium text-slate-700 truncate'>
+                                  {file.name}
+                                </div>
+
+                                <div className='text-xs text-slate-500'>
+                                  {formatFileSize(file.size)}
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type='button'
+                              onClick={() => deleteDocument(index)}
+                              className='h-7 w-7 flex items-center justify-center text-Red7 rounded hover:bg-red-50'
+                              title='Eliminar documento'
+                            >
+                              <BsTrash />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className='text-[11px] text-slate-500 mt-3'>
+                      Formatos permitidos: PDF, PNG, JPG y JPEG.
+                    </div>
+                  </div>
+                </div>
                 {/* ---------------------------------------------------------Información del crédito--------------------------------------------------------- */}
 
                 {lockedFromXML && creditoFinal && (
@@ -1861,7 +1978,6 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
         open={openNewProduct}
         onClose={() => setOpenNewProduct(null)}
         onProductCreated={(producto) => {
-          // 🔥 aquí luego conectas el producto con items
           setItems((prev) => [
             ...prev,
             {
@@ -1884,30 +2000,29 @@ export { FacturaMod }
 
 async function getData(uuid: string | undefined, token: string | null) {
   if (token) {
-    const factura =
-      uuid && uuid.length > 0
-        ? await ApiFecthAuth(endPoints.invoices.retrieve(uuid), token)
-        : null
+    const detractionPercent = await ApiFecthAuth(
+      endPoints.mainData.detraction.percent,
+      token
+    )
 
     const tipoCambioRes = await ApiFecthAuth(
       endPoints.mainData.exchange.latest,
       token
     )
 
-    const tipocambio =
-      tipoCambioRes && tipoCambioRes.data
-        ? (tipoCambioRes.data as unknown as TipoCambioDiaInterface)
-        : null
-
     return {
       props: {
-        factura: factura
-          ? (factura.data as unknown as InvoiceRetrieveLike)
-          : null,
-        tipocambio: tipocambio
+        tipocambio: tipoCambioRes,
+        detractionPercent: detractionPercent
       },
       revalidate: 3600
     }
   }
-  return { props: { factura: null, tipocambio: null }, revalidate: 3600 }
+  return {
+    props: {
+      tipocambio: null,
+      detractionPercent: null
+    },
+    revalidate: 3600
+  }
 }

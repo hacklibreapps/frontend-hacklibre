@@ -212,37 +212,33 @@ export interface FacturaInterface {
   items: LineaItemInterface[]
 }
 
+export interface InvoiceDocumentInterface {
+  uuid: string
+  title: string
+  document: string
+}
+
 export interface FacturacionInterface {
-  uuid: string // ID único universal
-  number: string // Ej: FAC-000123
-  client: string // Nombre del cliente o proveedor
-  clientId: string // UUID o id relacional
-  issueDate: string // Fecha de emisión (ISO)
-  dueDate?: string // Fecha de vencimiento (ISO, opcional)
+  uuid: string
+  invoiceSerialNr: string
+  invoiceCorrelativeNr: string
+  emitionDate: string
+  invoiceType: string
+  paymentType: string
+  clientName: string
+  clientRuc: string
+  moneyName: string
+  moneyCurrency: string
+  moneySign: string
+  subTotal: number
+  igv: number
+  importeTotal: number
+  hasDetraccion: boolean
+  detraccionAmount: number
+  status: string
+  documents: InvoiceDocumentInterface[] | []
 
-  currency: string // Ej: "PEN" | "USD"
-  status: boolean // true=Activa, false=Anulada
-  tipo: boolean // ⚠️ revisar (ver detalle abajo)
-
-  subtotal: number // Monto sin IGV
-  tax: number // IGV total
-  total: number // Total a pagar
-
-  notes?: string | null // Observaciones
-  fileUrl?: string | null // Enlace al PDF/XML
-  invoiceType?: string // Ej: "factura_venta", "boleta_compra", etc.
-
-  // ===== Opcionales Perú =====
-  opGravada?: number
-  opInafecta?: number
-  opExonerada?: number
-  recargoConsumo?: number
-  percepcion?: number
-  detraccion?: number
-  igvRate?: number // Ej: 0.18
-  exchangeRateUSD?: number // Tipo de cambio
-
-  items: LineaItemInterface[] // Detalle de ítems
+  observations?: string
 }
 
 export interface FacturaCompraInterface {

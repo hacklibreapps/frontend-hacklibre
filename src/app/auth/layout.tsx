@@ -28,7 +28,7 @@ export default function AuthLayout({
     // <div className='min-h-screen bg-gray-100 flex'>
     <div className='h-screen bg-gray-100 flex overflow-hidden'>
       {/* Desktop (lg+) */}
-
+    
       <Sidebar mode='desktop' />
 
       {/* Drawer (xs–lg) */}

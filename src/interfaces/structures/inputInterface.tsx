@@ -32,8 +32,8 @@ export interface InputInterface {
   required?: boolean
   minLen?: number
   maxLen?: number
-  minDate?: string
-  maxDate?: string
+  minDate?: string|number
+  maxDate?: string|number
   readOnly?: boolean
   pattern?: string
   errorMessage?: string

@@ -29,21 +29,28 @@ const ResponseFromCreated = ({
       if (response.status === 400) {
         const errorMessages = response.data
         const errorList: string[] = []
+
         Object.keys(errorMessages).forEach((key) => {
-          // Si el error es una lista, mostrar cada error individualmente
-          if (Array.isArray(errorMessages[key])) {
-            errorMessages[key].forEach((error: string) => {
-              errorList.push(`${error}`)
+          const value = errorMessages[key]
+
+          if (Array.isArray(value)) {
+            value.forEach((error: string) => {
+              errorList.push(error)
             })
-          } else {
-            errorList.push(`${key}: ${errorMessages[key]}`)
+          } else if (
+            typeof value === 'object' &&
+            value !== null &&
+            'message' in value
+          ) {
+            errorList.push(String(value.message))
+          } else if (typeof value === 'string') {
+            errorList.push(value)
           }
         })
-        if (errorList.length > 0) {
-          errorList.forEach((errorMessage) => {
-            ToastNotification('warning', errorMessage)
-          })
-        }
+
+        errorList.forEach((errorMessage) => {
+          ToastNotification('warning', errorMessage)
+        })
       } else if (response.status === 404) {
         ToastNotification('warning', response.data.error)
       } else {

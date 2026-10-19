@@ -2,6 +2,7 @@ import {
   BancoInterface,
   ClienteInterface,
   CotizacionInterface,
+  FacturacionInterface,
   ProductosInterface
 } from './queryInterface'
 
@@ -24,4 +25,7 @@ export interface BancosResultInterface extends BaseResultInterface {
 }
 export interface CotizacionResultInterface extends BaseResultInterface {
   results: CotizacionInterface[] | []
+}
+export interface FacturacionResultInterface extends BaseResultInterface {
+  results: FacturacionInterface[] | []
 }

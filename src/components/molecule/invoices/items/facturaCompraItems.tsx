@@ -1,37 +1,56 @@
 import React from 'react'
 import { FacturaCompraItemInterface } from '@/interfaces/structures/bodyFormInterface'
+import { KeyValueInterface } from '@/interfaces/structures/keyValueInterface'
 import { RiAddLine, RiDeleteBin6Line } from 'react-icons/ri'
 
 interface Props {
   items: FacturaCompraItemInterface[]
-  setItems: React.Dispatch<React.SetStateAction<FacturaCompraItemInterface[]>>
+  setItems: React.Dispatch<
+    React.SetStateAction<FacturaCompraItemInterface[]>
+  >
+  unidadMedidaList: KeyValueInterface[]
 }
 
-const FacturaCompraItems: React.FC<Props> = ({ items, setItems }) => {
-  const addItem = () =>
-    setItems([
-      ...items,
+const FacturaCompraItems: React.FC<Props> = ({
+  items,
+  setItems,
+  unidadMedidaList
+}) => {
+  const addItem = () => {
+    setItems((prev) => [
+      ...prev,
       {
         cantidad: 1,
-        unidad_medida: 'NIU',
+        unidad_medida: '',
         descripcion: '',
         valor_unitario: '0.00',
         icbper: '0.00'
       }
     ])
+  }
 
   const updateItem = <K extends keyof FacturaCompraItemInterface>(
     index: number,
     field: K,
     value: FacturaCompraItemInterface[K]
   ) => {
-    const copy = [...items]
-    copy[index] = { ...copy[index], [field]: value }
-    setItems(copy)
+    setItems((prev) =>
+      prev.map((item, currentIndex) =>
+        currentIndex === index
+          ? {
+              ...item,
+              [field]: value
+            }
+          : item
+      )
+    )
   }
 
-  const removeItem = (index: number) =>
-    setItems(items.filter((_, i) => i !== index))
+  const removeItem = (index: number) => {
+    setItems((prev) =>
+      prev.filter((_, currentIndex) => currentIndex !== index)
+    )
+  }
 
   return (
     <div className='space-y-3'>
@@ -39,11 +58,26 @@ const FacturaCompraItems: React.FC<Props> = ({ items, setItems }) => {
         <table className='w-full text-sm border border-slate-300 rounded-md'>
           <thead className='bg-slate-100 text-slate-700'>
             <tr>
-              <th className='px-2 py-2 text-center w-[8%]'>Cant.</th>
-              <th className='px-3 py-2 text-center w-[12%]'>UM</th>
-              <th className='px-3 py-2 text-center'>Descripción</th>
-              <th className='px-2 py-2 text-center w-[15%]'>Valor Unit.</th>
-              <th className='px-2 py-2 text-center w-[12%]'>ICBPER</th>
+              <th className='px-2 py-2 text-center w-[8%]'>
+                Cant.
+              </th>
+
+              <th className='px-3 py-2 text-center w-[12%]'>
+                UM
+              </th>
+
+              <th className='px-3 py-2 text-center'>
+                Descripción
+              </th>
+
+              <th className='px-2 py-2 text-center w-[15%]'>
+                Valor Unit.
+              </th>
+
+              <th className='px-2 py-2 text-center w-[12%]'>
+                ICBPER
+              </th>
+
               <th className='px-2 py-2 w-[5%]'></th>
             </tr>
           </thead>
@@ -51,57 +85,83 @@ const FacturaCompraItems: React.FC<Props> = ({ items, setItems }) => {
           <tbody>
             {items.map((it, i) => (
               <tr key={i} className='border-t'>
-                {/* Cantidad */}
+                {/* CANTIDAD */}
                 <td className='px-2 py-1 text-right'>
                   <input
                     type='number'
                     min={1}
-                    className='w-full text-center border  rounded px-2 py-1'
+                    step='1'
+                    className='w-full text-center border rounded px-2 py-1'
                     value={it.cantidad}
                     onChange={(e) =>
-                      updateItem(i, 'cantidad', Number(e.target.value))
+                      updateItem(
+                        i,
+                        'cantidad',
+                        Number(e.target.value)
+                      )
                     }
                   />
                 </td>
 
-                {/* UM */}
+                {/* UNIDAD DE MEDIDA */}
                 <td className='px-2 py-1 text-center'>
                   <select
                     className='w-full border rounded px-2 py-1 text-center'
                     value={it.unidad_medida}
                     onChange={(e) =>
-                      updateItem(i, 'unidad_medida', e.target.value)
+                      updateItem(
+                        i,
+                        'unidad_medida',
+                        e.target.value
+                      )
                     }
                   >
-                    <option value='NIU'>Unidad</option>
-                    <option value='KG'>Kg</option>
-                    <option value='ZZ'>Servicio</option>
+                    <option value=''>
+                      Seleccione
+                    </option>
+
+                    {unidadMedidaList.map((unidad) => (
+                      <option
+                        key={String(unidad.key)}
+                        value={String(unidad.key)}
+                      >
+                        {String(unidad.value)}
+                      </option>
+                    ))}
                   </select>
                 </td>
 
-                {/* Descripción */}
+                {/* DESCRIPCIÓN */}
                 <td className='px-2 py-1'>
                   <input
+                    type='text'
                     className='w-full border rounded px-2 py-1'
                     value={it.descripcion}
-                    onFocus={(e) => e.target.select()}
                     onChange={(e) =>
-                      updateItem(i, 'descripcion', e.target.value)
+                      updateItem(
+                        i,
+                        'descripcion',
+                        e.target.value
+                      )
                     }
                   />
                 </td>
 
-                {/* Valor unitario */}
+                {/* VALOR UNITARIO */}
                 <td className='px-2 py-1 text-right'>
                   <input
                     type='number'
+                    min='0'
+                    step='0.01'
                     className='w-full text-right border rounded px-2 py-1'
                     value={it.valor_unitario}
-                    onFocus={() => {
-                      updateItem(i, 'valor_unitario', '')
-                    }}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) =>
-                      updateItem(i, 'valor_unitario', e.target.value)
+                      updateItem(
+                        i,
+                        'valor_unitario',
+                        e.target.value
+                      )
                     }
                   />
                 </td>
@@ -110,16 +170,22 @@ const FacturaCompraItems: React.FC<Props> = ({ items, setItems }) => {
                 <td className='px-2 py-1 text-right'>
                   <input
                     type='number'
+                    min='0'
+                    step='0.01'
                     className='w-full text-right border rounded px-2 py-1'
-                    value={it.icbper}
-                    onFocus={() => {
-                      updateItem(i, 'icbper', '')
-                    }}
-                    onChange={(e) => updateItem(i, 'icbper', e.target.value)}
+                    value={it.icbper ?? '0.00'}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) =>
+                      updateItem(
+                        i,
+                        'icbper',
+                        e.target.value
+                      )
+                    }
                   />
                 </td>
 
-                {/* Eliminar */}
+                {/* ELIMINAR */}
                 <td className='px-2 py-1 text-center'>
                   <button
                     type='button'
@@ -136,7 +202,6 @@ const FacturaCompraItems: React.FC<Props> = ({ items, setItems }) => {
         </table>
       </div>
 
-      {/* Agregar ítem */}
       <button
         type='button'
         onClick={addItem}

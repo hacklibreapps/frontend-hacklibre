@@ -39,7 +39,7 @@ export default function TopBar() {
   return (
     <header
       className='
-        sticky top-0 z-50 flex flex-col sm:flex-row md:h-14 items-center justify-between
+        sticky top-0 z-20 flex flex-col sm:flex-row md:h-14 items-center justify-between
         border-b border-Cian2/30 bg-white/85 px-4 backdrop-blur 
       '
     >

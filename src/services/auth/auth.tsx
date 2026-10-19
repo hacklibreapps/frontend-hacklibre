@@ -7,20 +7,34 @@ export interface LoginResponse {
   enterprises?: {
     uuid: string
     name: string
+    comercialName: string
     logo: string
     icon: string
+    address: string
+    departamento: string
+    provincia: string
+    distrito: string
     detractionAccount: string
     detractionPercent: number
     ruc: string
+    telefono: string
+    email: string
   }[] // Lista de empresas del usuario
   active_enterprise?: {
     id: string
     name: string
+    comercialName: string
     logo: string
     icon: string
+    address: string
+    departamento: string
+    provincia: string
+    distrito: string
     detractionAccount: string
     detractionPercent: number
     ruc: string
+    telefono: string
+    email: string
   } // Empresa activa
   groups: string[]
   permissions: string[]
