@@ -1455,7 +1455,6 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
             <FormContent className='w-full'>
               <div className='w-full overflow-hidden bg-white lg:rounded-lg lg:border lg:border-slate-400 max-w-none mx-0 px-4 sm:px-6 md:px-8 lg:px-10'>
                 {/* ==== ENCABEZADO DE LA FACTURA ==== */}
-                {lateInvoice ? 'true' : 'false'}
                 <div className='grid grid-cols-1 md:grid-cols-12 items-center rounded-t bg-white'>
                   {/* Bloque de empresa */}
                   <div className='col-span-12 md:col-span-8 p-4 text-center md:text-start flex flex-col justify-center'>
