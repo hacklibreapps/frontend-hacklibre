@@ -352,6 +352,9 @@ const Select: FC<InputProps> = ({ data }) => {
               }`}
             >
               <div
+                data-tooltip-id='tooltip'
+                data-tooltip-place='left'
+                data-tooltip-content={value}
                 className={`w-full h-full flex flex-row z-40 justify-start items-center overflow-hidden text-left`}
                 onClick={handlerToogleSelect}
               >

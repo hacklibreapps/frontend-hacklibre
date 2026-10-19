@@ -48,7 +48,7 @@ const InvoiceItemsEditable: React.FC<InvoiceItemsEditableProps> = ({
   }
 
   return (
-    <div className='mt-4'>
+    <div className='mt-4 border border-red-500'>
       <p className='font-bold text-md uppercase mb-2'>PRODUCTOS</p>
 
       {/* =====================
@@ -345,4 +345,4 @@ const InvoiceItemsEditable: React.FC<InvoiceItemsEditableProps> = ({
   )
 }
 
-export default InvoiceItemsEditable
+export { InvoiceItemsEditable }

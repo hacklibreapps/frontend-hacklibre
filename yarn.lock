@@ -3081,6 +3081,7 @@ __metadata:
     tailwindcss: "npm:^3.4.1"
     tinymce: "npm:^8.1.2"
     typescript: "npm:^5"
+    written-number: "npm:^0.11.1"
   languageName: unknown
   linkType: soft
 
@@ -5862,6 +5863,13 @@ __metadata:
   version: 1.0.2
   resolution: "wrappy@npm:1.0.2"
   checksum: 10c0/56fece1a4018c6a6c8e28fbc88c87e0fbf4ea8fd64fc6c63b18f4acc4bd13e0ad2515189786dd2c30d3eec9663d70f4ecf699330002f8ccb547e4a18231fc9f0
+  languageName: node
+  linkType: hard
+
+"written-number@npm:^0.11.1":
+  version: 0.11.1
+  resolution: "written-number@npm:0.11.1"
+  checksum: 10c0/6996e32cbaa7fbd0f18c895f099f0e7f0d9c8ba8644bbba92a677e96e0cc331605d4b9796c1f904d5ed31de8966f795e1a641ac9739da905c2480838a0b58625
   languageName: node
   linkType: hard
 

@@ -17,11 +17,18 @@ import React from 'react'
 interface EnterpriseInterface {
   uuid: string
   razonSocial: string
+  comercialName: string
   logo: string
   icon: string
+  address: string
+  departamento: string
+  provincia: string
+  distrito: string
   detractionAccount: string
   detractionPercent: number
   ruc: string
+  telefono: string
+  email: string
 }
 
 export default function SignIn() {
@@ -81,17 +88,28 @@ export default function SignIn() {
         const list = data.enterprises.map((e) => ({
           uuid: e.uuid,
           name: e.name,
+          comercialName: e.comercialName,
           logo: e.logo,
           icon: e.icon,
+          address: e.address,
+          departamento: e.departamento,
+          provincia: e.provincia,
+          distrito: e.distrito,
           detractionAccount: e.detractionAccount,
           detractionPercent: e.detractionPercent,
-          ruc: e.ruc
+          ruc: e.ruc,
+          telefono: e.telefono,
+          email: e.email
         }))
         const active = data.active_enterprise?.id ?? list[0].uuid
         const activeName =
           data.active_enterprise?.name ??
           list.find((e) => e.uuid === active)?.name ??
           list[0].name
+        const activeComercialName =
+          data.active_enterprise?.comercialName ??
+          list.find((e) => e.uuid === active)?.comercialName ??
+          list[0].comercialName
         const activeLogo =
           data.active_enterprise?.logo ??
           list.find((e) => e.uuid === active)?.logo ??
@@ -104,6 +122,22 @@ export default function SignIn() {
           data.active_enterprise?.detractionAccount ??
           list.find((e) => e.uuid === active)?.detractionAccount ??
           list[0].detractionAccount
+        const activeAddress =
+          data.active_enterprise?.address ??
+          list.find((e) => e.uuid === active)?.address ??
+          list[0].address
+        const activeDepartamento =
+          data.active_enterprise?.departamento ??
+          list.find((e) => e.uuid === active)?.departamento ??
+          list[0].departamento
+        const activeProvincia =
+          data.active_enterprise?.provincia ??
+          list.find((e) => e.uuid === active)?.provincia ??
+          list[0].provincia
+        const activeDistrito =
+          data.active_enterprise?.distrito ??
+          list.find((e) => e.uuid === active)?.distrito ??
+          list[0].distrito
         const activeDetractionPercent =
           data.active_enterprise?.detractionPercent ??
           list.find((e) => e.uuid === active)?.detractionPercent ??
@@ -113,16 +147,31 @@ export default function SignIn() {
           data.active_enterprise?.ruc ??
           list.find((e) => e.uuid === active)?.ruc ??
           list[0].ruc
+        const activeTelefono =
+          data.active_enterprise?.telefono ??
+          list.find((e) => e.uuid === active)?.telefono ??
+          list[0].telefono
+        const activeEmail =
+          data.active_enterprise?.email ??
+          list.find((e) => e.uuid === active)?.email ??
+          list[0].email
 
         login(
           data.access,
           active,
           activeName,
+          activeComercialName,
           activeLogo,
           activeIcon,
+          activeAddress,
+          activeDepartamento,
+          activeProvincia,
+          activeDistrito,
           activeDetraction,
           activeDetractionPercent,
           activeRuc,
+          activeTelefono,
+          activeEmail,
           data.permissions,
           data.groups
         )
@@ -136,11 +185,18 @@ export default function SignIn() {
           data.access,
           chosen.uuid,
           chosen.razonSocial,
+          chosen.comercialName,
           chosen.logo,
           chosen.icon,
+          chosen.address,
+          chosen.departamento,
+          chosen.provincia,
+          chosen.distrito,
           chosen.detractionAccount,
           chosen.detractionPercent,
           chosen.ruc,
+          chosen.telefono,
+          chosen.email,
           data.permissions,
           data.groups
         )
@@ -149,19 +205,33 @@ export default function SignIn() {
             ({
               uuid,
               razonSocial,
+              comercialName,
               logo,
               icon,
+              address,
+              departamento,
+              provincia,
+              distrito,
               detractionAccount,
               detractionPercent,
-              ruc
+              ruc,
+              telefono,
+              email
             }) => ({
               uuid: uuid,
               name: razonSocial,
+              comercialName: comercialName,
               logo: logo,
               icon: icon,
+              address: address,
+              departamento: departamento,
+              provincia: provincia,
+              distrito: distrito,
               detractionAccount: detractionAccount,
               detractionPercent: detractionPercent,
-              ruc: ruc
+              ruc: ruc,
+              telefono: telefono,
+              email: email
             })
           ),
           chosen.uuid

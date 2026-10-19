@@ -1,7 +1,6 @@
 // src/modules/invoice/utils.ts
 export const IGV_RATE = 0.18 as const
 export type Money = 'PEN' | 'USD'
-export type CompanyKey = 'HACKLIBRE' | 'CAPARAZON'
 
 export type ItemRow = {
   id: string
@@ -121,30 +120,4 @@ export function numeroALetrasEs(n: number) {
   if (num > 0) resultado += centenas(num)
 
   return resultado.trim().replace(/\s+/g, ' ')
-}
-
-export const COMPANIES: Record<
-  CompanyKey,
-  {
-    legalName: string
-    commercialName: string
-    address: string
-    city: string
-    ruc: string
-  }
-> = {
-  HACKLIBRE: {
-    legalName: 'HACKLIBRE E.I.R.L.',
-    commercialName: 'Hacklibre Soluciones',
-    address: 'Jr. Ancash Nro. 3432',
-    city: 'San Martin de Porres - Lima - Perú',
-    ruc: '20604175446'
-  },
-  CAPARAZON: {
-    legalName: 'CAPARAZON E.I.R.L.',
-    commercialName: 'Caparazón Soluciones',
-    address: 'Calle Enrique Góngora Nro. 183',
-    city: 'San Martin de Porres - Lima - Perú',
-    ruc: '20613495810'
-  }
 }

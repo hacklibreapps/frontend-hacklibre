@@ -121,13 +121,6 @@ const ComprobantesTabsManagement: React.FC = () => {
             </div>
           )}
 
-          {/* BOLETA DE COMPRA */}
-          {/* {activeTab === 'boleta_compra' && (
-            <div className='animate-fadeIn'>
-              <BoletaCompraMod />
-            </div>
-          )} */}
-
           {/* RECIBO POR HONORARIOS */}
           {activeTab === 'buys_fee_recipt' && (
             <div className='animate-fadeIn'>

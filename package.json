@@ -45,7 +45,8 @@
     "recharts": "^3.2.0",
     "sharp": "^0.34.4",
     "swr": "^2.3.8",
-    "tinymce": "^8.1.2"
+    "tinymce": "^8.1.2",
+    "written-number": "^0.11.1"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.10",

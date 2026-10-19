@@ -151,8 +151,8 @@ const Input: FC<InputProps> = ({ data }) => {
             id={data.id}
             type={inputType}
             ref={data.ref}
-            min={data.minLen}
-            max={data.maxLen}
+            min={data.minDate}
+            max={data.maxDate}
             required={data.required}
             minLength={data.minLen}
             maxLength={data.maxLen}

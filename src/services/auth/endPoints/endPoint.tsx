@@ -121,29 +121,30 @@ const endPoints = {
   /* -------------------- FACTURAS -------------------- */
   invoices: {
     list: (page: string, filter?: string) =>
-      `${apiUrl}billing/invoices/?page=${page}${filter ? `&${filter}` : ''}`,
-    create: `${apiUrl}billing/invoices/`,
+      `${apiUrl}invoices/invoices/?page=${page}${filter ? `&${filter}` : ''}`,
+    // anterior \|/
+    create: `${apiUrl}invoices/invoices/`,
     retrieve: (uuid: string | number, flags?: string) =>
-      `${apiUrl}billing/invoices/${uuid}/${flags ? qs(flags) : ''}`,
-    put: (uuid: string | number) => `${apiUrl}billing/invoices/${uuid}/`,
+      `${apiUrl}invoices/invoices/${uuid}/${flags ? qs(flags) : ''}`,
+    put: (uuid: string | number) => `${apiUrl}invoices/invoices/${uuid}/`,
     postFactura: `${apiUrl}facturas/`,
-    patch: (uuid: string | number) => `${apiUrl}billing/invoices/${uuid}/`,
-    delete: (uuid: string | number) => `${apiUrl}billing/invoices/${uuid}/`,
-    noPaged: `${apiUrl}billing/invoices/no-paged/`,
+    patch: (uuid: string | number) => `${apiUrl}invoices/invoices/${uuid}/`,
+    delete: (uuid: string | number) => `${apiUrl}invoices/invoices/${uuid}/`,
+    noPaged: `${apiUrl}invoices/invoices/no-paged/`,
     // acciones habituales
-    pdf: (uuid: string | number) => `${apiUrl}billing/invoices/${uuid}/pdf/`,
+    pdf: (uuid: string | number) => `${apiUrl}invoices/invoices/${uuid}/pdf/`,
     sendEmail: (uuid: string | number) =>
-      `${apiUrl}billing/invoices/${uuid}/send-email/`,
-    pay: (uuid: string | number) => `${apiUrl}billing/invoices/${uuid}/pay/`,
+      `${apiUrl}invoices/invoices/${uuid}/send-email/`,
+    pay: (uuid: string | number) => `${apiUrl}invoices/invoices/${uuid}/pay/`,
     changeStatus: (uuid: string | number) =>
-      `${apiUrl}billing/invoices/${uuid}/change-status/`,
+      `${apiUrl}invoices/invoices/${uuid}/change-status/`,
     exportExcel: (filter?: string) =>
-      `${apiUrl}billing/invoices/export-excel/${qs(filter)}`,
+      `${apiUrl}invoices/invoices/export-excel/${qs(filter)}`,
     // yearRange: 'billing/invoices/year-range/', // 🔗 nuevo endpoint para rango de años
 
     //NUEVO ENDPOINT PARA IMPORTAR XML
     importXml: (uuid: string | number) =>
-      `${apiUrl}billing/invoices/${uuid}/import-xml/`
+      `${apiUrl}invoices/invoices/${uuid}/import-xml/`
   },
 
   /* -------------------- MOVIMIENTOS BANCARIOS -------------------- */ //FALTA ACTUALIZAR EN EL BACK
@@ -193,8 +194,8 @@ const endPoints = {
     years: `${apiUrl}quotations/data/years/`,
     status: `${apiUrl}quotations/data/status/`,
     templates: {
-      quotations:{
-        templateDefault:`${apiUrl}templates-quotations/data/template-default/`
+      quotations: {
+        templateDefault: `${apiUrl}templates-quotations/data/template-default/`
       },
       quotationTemplate: `${apiUrl}quotations/data/templates/quotation-template/`,
       quotationHtml: (uuid: string) =>
@@ -292,8 +293,11 @@ const endPoints = {
       tc: `${apiUrl}main-data/unidad-medida/tc/`
     },
     detraction: {
-      percent: `${apiUrl}main-data/invoices/detraction-percent/`
-    }
+      percent: `${apiUrl}main-data/invoices/detraction-percent/`,
+      leyend: `${apiUrl}main-data/invoices/detraction-legend/`
+    },
+    goodServiceType: `${apiUrl}main-data/invoices/goods-service-type/`,
+    paymentMethod: `${apiUrl}main-data/invoices/payment-method/`
   },
 
   /* -------------------- BANCOS -------------------- */

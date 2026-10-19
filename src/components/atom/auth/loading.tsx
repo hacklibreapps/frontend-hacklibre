@@ -1,4 +1,5 @@
 'use client'
+import { AiOutlineLoading3Quarters } from 'react-icons/ai'
 import { TbLoaderQuarter } from 'react-icons/tb'
 
 const LoadingQuarter = ({ value }: { value?: string }) => {
@@ -87,38 +88,13 @@ const LoadingTurtle = ({ value }: { value?: string }) => {
 //  Pingüino animado
 const Loading = ({ value }: { value?: string }) => {
   return (
-    <div className='w-full h-full flex flex-col justify-center items-center text-center'>
-      {/* Pingüino SVG generado por coordenadas */}
-      <svg
-        width='100'
-        height='100'
-        viewBox='0 0 100 100'
-        xmlns='http://www.w3.org/2000/svg'
-        className='animate-bounce'
-      >
-        {/* Cuerpo */}
-        <ellipse cx='50' cy='65' rx='25' ry='30' fill='#0a586b' />
-        {/* Barriga */}
-        <ellipse cx='50' cy='70' rx='18' ry='22' fill='white' />
-        {/* Alas */}
-        <ellipse cx='25' cy='65' rx='6' ry='14' fill='#0a586b' />
-        <ellipse cx='75' cy='65' rx='6' ry='14' fill='#0a586b' />
-        {/* Ojos */}
-        <circle cx='42' cy='45' r='3' fill='white' />
-        <circle cx='58' cy='45' r='3' fill='white' />
-        <circle cx='42' cy='45' r='1.5' fill='black' />
-        <circle cx='58' cy='45' r='1.5' fill='black' />
-        {/* Pico */}
-        <polygon points='50,50 45,55 55,55' fill='#e16d2c' />
-        {/* Patitas */}
-        <rect x='40' y='92' width='6' height='5' fill='#e16d2c' />
-        <rect x='54' y='92' width='6' height='5' fill='#e16d2c' />
-      </svg>
+    <div className='w-full h-full flex flex-row justify-center items-center text-center'>
+      <div className='text-xl animate-spin text-Cian8'>
+        <AiOutlineLoading3Quarters />
+      </div>
 
       {value && (
-        <p className='pt-4 font-medium text-lg text-gray-700 animate-fadeIn'>
-          {value}
-        </p>
+        <p className='pl-4 font-medium text-lg text-gray-700 '>{value}</p>
       )}
     </div>
   )
