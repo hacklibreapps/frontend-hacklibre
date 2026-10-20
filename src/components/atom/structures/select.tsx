@@ -377,11 +377,7 @@ const Select: FC<InputProps> = ({ data }) => {
                 showSelect ? (
                   <div
                     onMouseDown={(e) => e.stopPropagation()}
-                    className={`${
-                      showSelect
-                        ? 'border border-Cian7/50'
-                        : 'border border-Cian7/50'
-                    }  w-full mx-0 absolute ${
+                    className={`border border-Cian7/50  w-full mx-0 absolute ${
                       data.tiny ? 'top-[32px]' : 'top-[42px]'
                     } left-0 max-h-48 overflow-y-auto bg-Cian2 z-[99999]`}
                   >

@@ -1644,7 +1644,7 @@ const FacturaMod: React.FC<UUIDInterface> = ({ uuid }) => {
                     onEnableEdit={() => setItemsFromXML(false)}
                   />
                 ) : (
-                  <div className='mt-4 border border-slate-300 rounded-lg overflow-hidden'>
+                  <div className='mt-4 border border-slate-300 rounded-lg overflow-visible'>
                     <div className='flex justify-start items-center bg-cyan-900 text-white px-4 py-2'>
                       <span className='font-semibold text-sm'>Productos</span>
                     </div>
